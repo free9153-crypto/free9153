@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>PLAVE 실시간 멀티 릴레이 그림판</title>
-    <!-- Firebase SDK (멀티플레이 & 채팅 서버) -->
+    <!-- Firebase SDK -->
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
     <style>
@@ -30,29 +30,31 @@
         h1 { font-size: 20px; color: #4C1D95; margin: 0 0 5px 0; text-align: center; }
         .sub { font-size: 13px; color: #6B21A8; text-align: center; margin-bottom: 15px; font-weight: bold; }
         
-        /* Setup Screen */
         .setup-group { margin-bottom: 12px; text-align: left; }
         label { font-size: 12px; font-weight: bold; color: #374151; display: block; margin-bottom: 4px; }
         input, select { width: 100%; padding: 10px; border-radius: 12px; border: 2px solid #DDD6FE; font-size: 14px; outline: none; background: white; }
-        .btn-main { background: linear-gradient(90deg, #8B5CF6, #EC4899); color: white; border: none; width: 100%; padding: 14px; border-radius: 14px; font-size: 16px; font-weight: bold; cursor: pointer; }
+        .btn-main { background: linear-gradient(90deg, #8B5CF6, #EC4899); color: white; border: none; width: 100%; padding: 14px; border-radius: 14px; font-size: 16px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 12px rgba(236, 72, 153, 0.3); }
+        .btn-start { background: linear-gradient(90deg, #10B981, #3B82F6); color: white; border: none; width: 100%; padding: 12px; border-radius: 12px; font-size: 15px; font-weight: bold; cursor: pointer; margin-bottom: 10px; }
         
-        /* Game Screen */
         #gameScreen, #resultScreen { display: none; }
         .header-status { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
         .topic-badge { background: #F3E8FF; color: #6B21A8; padding: 6px 12px; border-radius: 20px; font-size: 13px; font-weight: bold; }
         .timer-box { font-size: 20px; font-weight: 900; color: #6B21A8; }
 
-        /* Canvas */
         .canvas-container { position: relative; width: 100%; background: white; border-radius: 16px; border: 3px solid #DDD6FE; overflow: hidden; }
-        canvas { display: block; width: 100%; height: 260px; background: white; cursor: crosshair; }
+        canvas { display: block; width: 100%; height: 240px; background: white; cursor: crosshair; }
 
-        /* Palette */
-        .palette { display: flex; gap: 8px; justify-content: center; margin: 10px 0; flex-wrap: wrap; }
-        .color-dot { width: 28px; height: 28px; border-radius: 50%; border: 2px solid white; cursor: pointer; }
+        /* 팔레트 & 도구 버튼 영역 */
+        .controls-row { display: flex; justify-content: space-between; align-items: center; margin: 10px 0; flex-wrap: wrap; gap: 6px; }
+        .palette { display: flex; gap: 6px; align-items: center; }
+        .color-dot { width: 26px; height: 26px; border-radius: 50%; border: 2px solid white; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         .color-dot.active { transform: scale(1.2); border-color: #4C1D95; }
+        
+        .tool-btns { display: flex; gap: 6px; }
+        .btn-tool { background: #F3F4F6; border: 1px solid #D1D5DB; padding: 6px 10px; border-radius: 8px; font-size: 12px; font-weight: bold; cursor: pointer; color: #374151; }
+        .btn-tool.eraser-active { background: #FEF3C7; border-color: #F59E0B; color: #B45309; }
 
-        /* Chat Area */
-        .chat-box { background: #F9FAFB; border-radius: 12px; border: 1px solid #E5E7EB; height: 110px; overflow-y: auto; padding: 8px; margin-top: 10px; font-size: 12px; text-align: left; }
+        .chat-box { background: #F9FAFB; border-radius: 12px; border: 1px solid #E5E7EB; height: 90px; overflow-y: auto; padding: 8px; margin-top: 8px; font-size: 12px; text-align: left; }
         .chat-msg { margin-bottom: 4px; }
         .chat-msg span { font-weight: bold; color: #6B21A8; }
         .chat-input-group { display: flex; gap: 6px; margin-top: 6px; }
@@ -65,7 +67,7 @@
     <!-- 1. 설정 화면 -->
     <div class="card" id="setupScreen">
         <h1>✨ PLAVE 멀티 릴레이 그림판</h1>
-        <div class="sub">💬 채팅하며 친구들과 함께 즐기는 10초 릴레이 💬</div>
+        <div class="sub">💬 채팅하며 친구들과 함께 즐기는 릴레이 💬</div>
         
         <div class="setup-group">
             <label>닉네임</label>
@@ -77,41 +79,37 @@
             <input type="text" id="roomCode" value="PLAVE123">
         </div>
 
-        <div class="setup-group">
-            <label>👥 참여 인원 선택 (멀티플레이 모드)</label>
-            <select id="playerCount">
-                <option value="1">1인 연습 모드 (멀티X)</option>
-                <option value="2">2인 멀티 플레이</option>
-                <option value="3">3인 멀티 플레이</option>
-                <option value="4" selected>4인 멀티 플레이</option>
-                <option value="5">5인 멀티 플레이</option>
-            </select>
-        </div>
-
-        <button class="btn-main" onclick="joinRoom()">방 접속하기 🚀</button>
+        <button class="btn-main" onclick="joinRoom()">릴레이 대기실 입장 🚀</button>
     </div>
 
     <!-- 2. 게임 화면 -->
     <div class="card" id="gameScreen">
         <div class="header-status">
-            <span class="topic-badge" id="topicDisplay">주제: 로딩중...</span>
+            <span class="topic-badge" id="topicDisplay">주제: 대기 중</span>
             <div class="timer-box" id="timer">⏱️ 10</div>
         </div>
 
-        <div style="font-size:14px; font-weight:bold; color:#1F2937; margin-bottom:6px; text-align:center;" id="turnDisplay">대기 중...</div>
+        <button class="btn-start" id="startBtn" onclick="startGame()">🎨 게임 시작하기!</button>
+        <div style="font-size:13px; font-weight:bold; color:#1F2937; margin-bottom:6px; text-align:center;" id="turnDisplay">시작 버튼을 눌러주세요</div>
 
         <div class="canvas-container">
-            <canvas id="paintCanvas" width="400" height="260"></canvas>
+            <canvas id="paintCanvas" width="400" height="240"></canvas>
         </div>
 
-        <!-- PLAVE 멤버 상징 팔레트 -->
-        <div class="palette">
-            <div class="color-dot active" style="background:#000000;" onclick="setColor('#000000', this)"></div>
-            <div class="color-dot" style="background:var(--yejun);" title="예준 파랑" onclick="setColor('#3B82F6', this)"></div>
-            <div class="color-dot" style="background:var(--noah);" title="노아 보라" onclick="setColor('#A855F7', this)"></div>
-            <div class="color-dot" style="background:var(--bambi);" title="밤비 분홍" onclick="setColor('#EC4899', this)"></div>
-            <div class="color-dot" style="background:var(--eunho);" title="은호 빨강" onclick="setColor('#EF4444', this)"></div>
-            <div class="color-dot" style="background:var(--hamin);" title="하민 초록" onclick="setColor('#10B981', this)"></div>
+        <!-- 컬러 팔레트 & 지우개 / 전체삭제 버튼 -->
+        <div class="controls-row">
+            <div class="palette">
+                <div class="color-dot active" style="background:#000000;" onclick="setColor('#000000', this)" title="검정"></div>
+                <div class="color-dot" style="background:var(--yejun);" onclick="setColor('#3B82F6', this)" title="예준 파랑"></div>
+                <div class="color-dot" style="background:var(--noah);" onclick="setColor('#A855F7', this)" title="노아 보라"></div>
+                <div class="color-dot" style="background:var(--bambi);" onclick="setColor('#EC4899', this)" title="밤비 분홍"></div>
+                <div class="color-dot" style="background:var(--eunho);" onclick="setColor('#EF4444', this)" title="은호 빨강"></div>
+                <div class="color-dot" style="background:var(--hamin);" onclick="setColor('#10B981', this)" title="하민 초록"></div>
+            </div>
+            <div class="tool-btns">
+                <button class="btn-tool" id="eraserBtn" onclick="toggleEraser()">🧹 지우개</button>
+                <button class="btn-tool" onclick="clearCanvas()">🗑️ 전체 삭제</button>
+            </div>
         </div>
 
         <!-- Realtime Chat -->
@@ -130,91 +128,91 @@
             <img id="resultImage" style="width:100%; border-radius:16px; border:3px solid #DDD6FE;">
         </div>
         <button class="btn-main" onclick="downloadImage()">💾 이미지 저장하기</button>
-        <button style="width:100%; margin-top:8px; padding:12px; border:none; background:#F3F4F6; border-radius:10px; font-weight:bold;" onclick="location.reload()">🔄 메인으로 이동</button>
+        <button style="width:100%; margin-top:8px; padding:12px; border:none; background:#F3F4F6; border-radius:10px; font-weight:bold;" onclick="location.reload()">🔄 다시 하기</button>
     </div>
 
     <script>
-        // ✅ [오타 수정 완료] 파이어베이스 무료 실시간 데이터베이스 연동 설정 (한국 서버)
         const firebaseConfig = { databaseURL: "https://plave-relay-default-rtdb.asia-southeast1.firebasedatabase.app" };
         firebase.initializeApp(firebaseConfig);
         const db = firebase.database();
 
-        let myName = "", roomRef = null;
-        let color = "#000000", isDrawing = false;
+        const topics = ["예준이의 하트", "노아의 쌩얼 아이돌 모드", "밤비의 핑크 덤벨", "은호의 레드 랩 폭발", "하민이의 은하수 댄스", "칼리고 디제잉", "아스테룸 유성우"];
+        let myName = "", roomRef = null, timerInterval = null, timeLeft = 10;
+        let color = "#000000", isEraser = false, isDrawing = false;
         const canvas = document.getElementById('paintCanvas');
         const ctx = canvas.getContext('2d');
 
         function joinRoom() {
             myName = document.getElementById('nickname').value.trim() || "익명 힐러";
             const code = document.getElementById('roomCode').value.trim() || "PLAVE123";
-            
-            // 파이어베이스 데이터베이스 경로 설정
             roomRef = db.ref('rooms/' + code);
             
-            // 화면 전환
             document.getElementById('setupScreen').style.display = 'none';
             document.getElementById('gameScreen').style.display = 'block';
 
-            // [채팅 기능] 실시간 채팅 수신
             roomRef.child('chat').on('child_added', (snapshot) => {
                 const data = snapshot.val();
                 if (data && data.name && data.msg) {
                     const box = document.getElementById('chatBox');
                     box.innerHTML += `<div class="chat-msg"><span>${data.name}:</span> ${data.msg}</div>`;
-                    box.scrollTop = box.scrollHeight; // 새 메시지가 오면 자동으로 아래로 스크롤
+                    box.scrollTop = box.scrollHeight;
                 }
             });
 
-            // [멀티플레이 그림 기능] 캔버스 실시간 동기화 (받기)
             roomRef.child('draw').on('value', (snapshot) => {
                 const dataUrl = snapshot.val();
                 if (dataUrl) {
                     const img = new Image();
-                    img.onload = () => {
-                        // ctx.clearRect(0, 0, canvas.width, canvas.height); // 다른 사람 그림을 그리기 전에 캔버스를 한 번 지울지 선택 (주석 해제 시 턴 전환 시 지워짐)
-                        ctx.drawImage(img, 0, 0);
-                    };
+                    img.onload = () => ctx.drawImage(img, 0, 0);
                     img.src = dataUrl;
                 }
             });
 
-            // 임시 주제 제시 (진짜 멀티플레이 로직은 추가 구현 필요)
-            document.getElementById('topicDisplay').innerText = "주제: 로딩 완료! (대기 중)";
-
             initCanvas();
-            sendSystemChat(`${myName} 님이 방에 입장하셨습니다!`);
+            sendSystemChat(`${myName} 님이 입장하셨습니다!`);
         }
 
-        // 초기 캔버스 설정
+        function startGame() {
+            document.getElementById('startBtn').style.display = 'none';
+            const randomTopic = topics[Math.floor(Math.random() * topics.length)];
+            document.getElementById('topicDisplay').innerText = `주제: ${randomTopic}`;
+            document.getElementById('turnDisplay').innerText = "🎨 그림 그리기 시작!";
+            
+            timeLeft = 10;
+            if (timerInterval) clearInterval(timerInterval);
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                document.getElementById('timer').innerText = `⏱️ ${timeLeft}`;
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    endGame();
+                }
+            }, 1000);
+        }
+
+        function endGame() {
+            document.getElementById('gameScreen').style.display = 'none';
+            document.getElementById('resultScreen').style.display = 'block';
+            document.getElementById('resultTopic').innerText = document.getElementById('topicDisplay').innerText;
+            document.getElementById('resultImage').src = canvas.toDataURL();
+        }
+
         function initCanvas() {
             ctx.fillStyle = "#FFFFFF";
             ctx.fillRect(0, 0, canvas.width, canvas.height);
         }
 
-        // [채팅 기능] 메시지 전송
         function sendChat() {
             const input = document.getElementById('chatInput');
-            const msg = input.value.trim();
-            if (!msg) return; // 빈 메시지는 전송 안 함
-
-            if (roomRef) {
-                roomRef.child('chat').push({ name: myName, msg: msg });
-                input.value = "";
-            } else {
-                alert("방에 아직 접속하지 않았습니다.");
-            }
+            if (!input.value.trim()) return;
+            if (roomRef) roomRef.child('chat').push({ name: myName, msg: input.value.trim() });
+            input.value = "";
         }
 
-        // 시스템 공지 채팅 전송
         function sendSystemChat(msg) {
-            if (roomRef) {
-                roomRef.child('chat').push({ name: "📢 시스템", msg: msg });
-            }
+            if (roomRef) roomRef.child('chat').push({ name: "📢 시스템", msg: msg });
         }
 
-        /* 🎨 그림판 기능 및 실시간 동기화 (보내기) */
-        
-        // 마우스 및 터치 위치 계산
         function getPos(e) {
             const rect = canvas.getBoundingClientRect();
             const clientX = e.touches ? e.touches[0].clientX : e.clientX;
@@ -222,65 +220,61 @@
             return { x: (clientX - rect.left) * (canvas.width / rect.width), y: (clientY - rect.top) * (canvas.height / rect.height) };
         }
 
-        // 그림 그리기 시작
-        function startDrawing(e) {
-            // 진짜 멀티플레이 시에는 내 턴인지 확인하는 로직이 필요합니다.
-            // if (!isMyTurn) return; 
-
-            isDrawing = true;
-            draw(e);
-        }
-
-        // 그림 그리기 중단 및 파이어베이스에 업로드
+        function startDrawing(e) { isDrawing = true; draw(e); }
         function stopDrawing() { 
             if(isDrawing) { 
                 isDrawing = false; 
-                ctx.beginPath(); // 그리기 선 초기화
-
-                // 내 그림 데이터를 파이어베이스에 실시간으로 업로드하여 다른 사람들에게 보여줌
-                if(roomRef) {
-                    roomRef.child('draw').set(canvas.toDataURL());
-                }
+                ctx.beginPath(); 
+                if(roomRef) roomRef.child('draw').set(canvas.toDataURL());
             } 
         }
-
-        // 실제 그리기 함수
         function draw(e) {
             if (!isDrawing) return;
             const pos = getPos(e);
-            ctx.lineWidth = 4;
-            ctx.lineCap = 'round'; // 선 끝을 둥글게
-            ctx.strokeStyle = color; // 현재 선택된 색상
-
+            ctx.lineWidth = isEraser ? 16 : 4; // 지우개일 때는 굵게, 펜일 때는 4
+            ctx.lineCap = 'round';
+            ctx.strokeStyle = isEraser ? "#FFFFFF" : color; // 지우개면 흰색으로 칠하기
             ctx.lineTo(pos.x, pos.y);
-            ctx.stroke(); // 선을 그림
+            ctx.stroke();
             ctx.beginPath();
-            ctx.moveTo(pos.x, pos.y); // 다음 점으로 이동
+            ctx.moveTo(pos.x, pos.y);
         }
 
-        // 이벤트 리스너 등록 (PC & 모바일)
         canvas.addEventListener('mousedown', startDrawing);
         canvas.addEventListener('mousemove', draw);
         canvas.addEventListener('mouseup', stopDrawing);
-        canvas.addEventListener('mouseleave', stopDrawing); // 마우스가 캔버스를 벗어나도 그리기 중단
-
         canvas.addEventListener('touchstart', (e) => { startDrawing(e); e.preventDefault(); });
         canvas.addEventListener('touchmove', (e) => { draw(e); e.preventDefault(); });
         canvas.addEventListener('touchend', stopDrawing);
 
-        // 색상 팔레트 설정
         function setColor(c, el) {
+            isEraser = false;
+            document.getElementById('eraserBtn').classList.remove('eraser-active');
             color = c;
-            // 활성화된 색상 표시 변경
             document.querySelectorAll('.color-dot').forEach(d => d.classList.remove('active'));
             if(el) el.classList.add('active');
         }
 
-        // 완성된 이미지 저장
+        function toggleEraser() {
+            isEraser = !isEraser;
+            const eraserBtn = document.getElementById('eraserBtn');
+            if (isEraser) {
+                eraserBtn.classList.add('eraser-active');
+                document.querySelectorAll('.color-dot').forEach(d => d.classList.remove('active'));
+            } else {
+                eraserBtn.classList.remove('eraser-active');
+            }
+        }
+
+        function clearCanvas() {
+            ctx.fillStyle = "#FFFFFF";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            if(roomRef) roomRef.child('draw').set(canvas.toDataURL());
+        }
+
         function downloadImage() {
-            const dataUrl = canvas.toDataURL();
             const a = document.createElement('a');
-            a.href = dataUrl;
+            a.href = canvas.toDataURL();
             a.download = 'PLAVE_Relay_Drawing.png';
             a.click();
         }
