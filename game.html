@@ -32,7 +32,7 @@
         
         .setup-group { margin-bottom: 12px; text-align: left; }
         label { font-size: 12px; font-weight: bold; color: #374151; display: block; margin-bottom: 4px; }
-        input, select { width: 100%; padding: 10px; border-radius: 12px; border: 2px solid #DDD6FE; font-size: 14px; outline: none; background: white; }
+        input { width: 100%; padding: 10px; border-radius: 12px; border: 2px solid #DDD6FE; font-size: 14px; outline: none; background: white; }
         .btn-main { background: linear-gradient(90deg, #8B5CF6, #EC4899); color: white; border: none; width: 100%; padding: 14px; border-radius: 14px; font-size: 16px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 12px rgba(236, 72, 153, 0.3); margin-top: 5px; }
         .btn-start { background: linear-gradient(90deg, #10B981, #3B82F6); color: white; border: none; width: 100%; padding: 12px; border-radius: 12px; font-size: 15px; font-weight: bold; cursor: pointer; margin-bottom: 10px; }
         
@@ -64,22 +64,21 @@
 </head>
 <body>
 
-    <!-- 1. 첫 화면 (접속 전 메인 로비 + 실시간 전체 채팅) -->
+    <!-- 1. 첫 화면 -->
     <div class="card" id="setupScreen">
-        <h1>✨ PLAVE 멀티 릴레이 그림판</h1>
-        <div class="sub">💬 입장 전부터 나누는 실시간 전체 대화창 💬</div>
+        <h1>✨ PLAVE 턴제 멀티 릴레이 그림판</h1>
+        <div class="sub">💬 접속 전 전체 로비 대화창 💬</div>
 
-        <!-- 처음 접속하자마자 보이는 전체 로비 채팅창 -->
         <div class="setup-group">
             <label>💬 실시간 전체 로비 채팅</label>
-            <div class="chat-box" id="globalChatBox" style="height: 120px;"></div>
+            <div class="chat-box" id="globalChatBox" style="height: 110px;"></div>
             <div class="chat-input-group">
                 <input type="text" id="globalChatInput" placeholder="접속자들과 자유롭게 대화해보세요!" onkeypress="if(event.key==='Enter') sendGlobalChat()">
                 <button onclick="sendGlobalChat()">전송</button>
             </div>
         </div>
         
-        <div class="setup-group" style="margin-top:12px;">
+        <div class="setup-group" style="margin-top:8px;">
             <label>닉네임</label>
             <input type="text" id="nickname" placeholder="닉네임을 입력하세요 (예: 밤비팬)">
         </div>
@@ -96,10 +95,10 @@
     <div class="card" id="gameScreen">
         <div class="header-status">
             <span class="topic-badge" id="topicDisplay">주제: 대기 중</span>
-            <div class="timer-box" id="timer">⏱️ 10</div>
+            <div class="timer-box" id="timer">⏱️ 15</div>
         </div>
 
-        <button class="btn-start" id="startBtn" onclick="startGame()">🎨 릴레이 시작하기!</button>
+        <button class="btn-start" id="startBtn" onclick="startGame()">🎨 그림판 시작하기!</button>
         <div style="font-size:13px; font-weight:bold; color:#1F2937; margin-bottom:6px; text-align:center;" id="turnDisplay">시작 버튼을 눌러주세요</div>
 
         <div class="canvas-container">
@@ -147,7 +146,7 @@
         </div>
 
         <button class="btn-main" style="margin-top:10px;" onclick="downloadImage()">💾 이미지 저장하기</button>
-        <button class="btn-start" style="margin-top:8px; padding:12px;" onclick="nextTopicGame()">🔄 다음 주제로 계속 그리기</button>
+        <button class="btn-start" style="margin-top:8px; padding:12px;" onclick="nextTopicGame()">🔄 다음 판 시작하기</button>
     </div>
 
     <script>
@@ -156,14 +155,13 @@
         const db = firebase.database();
 
         const topics = ["예준이의 하트", "노아의 쌩얼 아이돌 모드", "밤비의 핑크 덤벨", "은호의 레드 랩 폭발", "하민이의 은하수 댄스", "칼리고 디제잉", "아스테룸 유성우"];
-        let myName = "", myId = "", roomRef = null, globalChatRef = null, timerInterval = null, timeLeft = 10;
+        let myName = "", myId = "", roomRef = null, globalChatRef = null, timerInterval = null, timeLeft = 15;
         let color = "#000000", isEraser = false, isDrawing = false, isMyTurn = true;
         let playerList = [];
 
         const canvas = document.getElementById('paintCanvas');
         const ctx = canvas.getContext('2d');
 
-        // 🔥 접속하자마자 전체 로비 실시간 채팅 연결
         window.onload = function() {
             globalChatRef = db.ref('global_lobby_chat');
             globalChatRef.limitToLast(30).on('child_added', (snapshot) => {
@@ -204,7 +202,7 @@
                 playerList = val ? Object.keys(val).map(k => ({ id: k, name: val[k].name })) : [];
             });
 
-            // 게임 내 방별 실시간 채팅
+            // 방별 실시간 채팅
             roomRef.child('chat').on('child_added', (snapshot) => {
                 const data = snapshot.val();
                 if (data && data.name && data.msg) {
@@ -214,7 +212,7 @@
                 }
             });
 
-            // 실시간 방명록
+            // 방명록
             roomRef.child('guestbook').on('child_added', (snapshot) => {
                 const data = snapshot.val();
                 if (data && data.name && data.msg) {
@@ -224,7 +222,7 @@
                 }
             });
 
-            // 캔버스 실시간 동기화
+            // 캔버스 동기화
             roomRef.child('draw').on('value', (snapshot) => {
                 const dataUrl = snapshot.val();
                 if (dataUrl) {
@@ -235,7 +233,7 @@
             });
 
             initCanvas();
-            sendSystemChat(`${myName} 님이 방에 입장하셨습니다!`);
+            sendSystemChat(`${myName} 님이 입장하셨습니다!`);
         }
 
         function startGame() {
@@ -244,7 +242,29 @@
             document.getElementById('topicDisplay').innerText = `주제: ${randomTopic}`;
             
             initCanvas();
-            startTurnProcess(0);
+
+            // 혼자 있으면 바로 내 차례로 시작, 여럿이면 릴레이 턴 시작!
+            if (playerList.length <= 1) {
+                isMyTurn = true;
+                timeLeft = 20;
+                document.getElementById('timer').innerText = `⏱️ ${timeLeft}`;
+                document.getElementById('turnDisplay').innerText = `🎨 혼자 그리기 연습 모드 (20초)`;
+                startSoloTimer();
+            } else {
+                startTurnProcess(0);
+            }
+        }
+
+        function startSoloTimer() {
+            if (timerInterval) clearInterval(timerInterval);
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                document.getElementById('timer').innerText = `⏱️ ${timeLeft}`;
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    endGame();
+                }
+            }, 1000);
         }
 
         function startTurnProcess(turnIdx) {
@@ -259,7 +279,7 @@
             const lockOverlay = document.getElementById('lockOverlay');
             if (isMyTurn) {
                 lockOverlay.style.display = 'none';
-                document.getElementById('turnDisplay').innerText = `🎨 내 차례입니다! 그리기 시작!`;
+                document.getElementById('turnDisplay').innerText = `🎨 내 차례입니다! (10초)`;
             } else {
                 lockOverlay.style.display = 'flex';
                 lockOverlay.innerText = `🔒 ${currentPlayer.name} 님의 차례입니다`;
@@ -282,10 +302,10 @@
             document.getElementById('resultScreen').style.display = 'none';
             document.getElementById('gameScreen').style.display = 'block';
             document.getElementById('startBtn').style.display = 'block';
-            document.getElementById('startBtn').innerText = "🎨 다음 릴레이 시작!";
+            document.getElementById('startBtn').innerText = "🎨 다음 판 시작하기";
             document.getElementById('lockOverlay').style.display = 'none';
-            document.getElementById('turnDisplay').innerText = "시작 버튼을 누르면 턴이 진행됩니다";
-            document.getElementById('timer').innerText = `⏱️ 10`;
+            document.getElementById('turnDisplay').innerText = "시작 버튼을 누르면 시작됩니다";
+            document.getElementById('timer').innerText = `⏱️ 15`;
             initCanvas();
         }
 
