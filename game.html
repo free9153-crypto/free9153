@@ -35,10 +35,9 @@
         label { font-size: 11px; font-weight: bold; color: #374151; display: block; margin-bottom: 3px; }
         input { width: 100%; padding: 8px; border-radius: 10px; border: 2px solid #DDD6FE; font-size: 14px; outline: none; background: white; }
         .btn-main { background: linear-gradient(90deg, #8B5CF6, #EC4899); color: white; border: none; width: 100%; padding: 12px; border-radius: 12px; font-size: 15px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 12px rgba(236, 72, 153, 0.3); margin-top: 5px; }
-        
-        /* 시작 버튼을 최상단으로 올려서 무조건 보이게 배치 */
         .btn-start { background: linear-gradient(90deg, #10B981, #3B82F6); color: white; border: none; width: 100%; padding: 14px; border-radius: 12px; font-size: 16px; font-weight: bold; cursor: pointer; margin-bottom: 8px; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3); }
-        
+        .btn-gallery { background: #8B5CF6; color: white; border: none; width: 100%; padding: 10px; border-radius: 10px; font-size: 13px; font-weight: bold; cursor: pointer; margin-top: 6px; }
+
         #gameScreen, #resultScreen { display: none; }
         .header-status { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
         .topic-badge { background: #F3E8FF; color: #6B21A8; padding: 5px 10px; border-radius: 15px; font-size: 12px; font-weight: bold; }
@@ -63,6 +62,14 @@
         .chat-input-group { display: flex; gap: 5px; margin-top: 5px; }
         .chat-input-group input { flex: 1; padding: 7px; font-size: 11px; }
         .chat-input-group button { background: #8B5CF6; color: white; border: none; padding: 7px 10px; border-radius: 6px; font-weight: bold; font-size: 11px; }
+
+        /* 🖼️ 갤러리 모달 팝업 스타일 */
+        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 999; justify-content: center; align-items: center; padding: 15px; }
+        .modal-content { background: white; border-radius: 20px; padding: 15px; width: 100%; max-width: 440px; max-height: 85vh; overflow-y: auto; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
+        .gallery-grid { display: grid; grid-template-columns: 1fr; gap: 15px; margin-top: 10px; }
+        .gallery-item { border: 2px solid #DDD6FE; border-radius: 12px; padding: 8px; background: #FAF5FF; }
+        .gallery-item img { width: 100%; border-radius: 8px; border: 1px solid #E9D5FF; }
+        .gallery-item-title { font-size: 12px; font-weight: bold; color: #6B21A8; margin-top: 4px; text-align: center; }
     </style>
 </head>
 <body>
@@ -96,7 +103,6 @@
 
     <!-- 2. 게임 화면 -->
     <div class="card" id="gameScreen">
-        <!-- 🔥 시작 버튼을 상단에 눈에 띄게 배치 -->
         <button class="btn-start" id="startBtn" onclick="startGame()">🎨 그림판 시작하기!</button>
 
         <div class="header-status">
@@ -125,6 +131,8 @@
             </div>
         </div>
 
+        <button class="btn-gallery" onclick="openGallery()">🖼️ 우리 방 역대 작품 보러가기</button>
+
         <!-- Realtime Chat -->
         <div class="chat-box" id="chatBox"></div>
         <div class="chat-input-group">
@@ -149,8 +157,22 @@
             <button onclick="sendGuestbook()">남기기</button>
         </div>
 
-        <button class="btn-main" style="margin-top:8px;" onclick="downloadImage()">💾 이미지 저장하기</button>
+        <button class="btn-gallery" onclick="openGallery()">🖼️ 역대 작품 갤러리 열기</button>
+        <button class="btn-main" style="margin-top:6px;" onclick="downloadImage()">💾 이미지 저장하기</button>
         <button class="btn-start" style="margin-top:6px; padding:10px;" onclick="nextTopicGame()">🔄 다음 판 시작하기</button>
+    </div>
+
+    <!-- 4. 🖼️ 역대 작품 갤러리 팝업 모달 -->
+    <div class="modal-overlay" id="galleryModal">
+        <div class="modal-content">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+                <h2 style="font-size:16px; color:#4C1D95; margin:0;">🖼️ 우리 방 역대 게시판</h2>
+                <button onclick="closeGallery()" style="background:#E5E7EB; border:none; padding:5px 10px; border-radius:8px; font-weight:bold; cursor:pointer;">✕ 닫기</button>
+            </div>
+            <div class="gallery-grid" id="galleryGrid">
+                <div style="text-align:center; color:#6B21A8; font-size:13px; padding:20px;">아직 저장된 작품이 없습니다! 첫 판을 완성해보세요 ✨</div>
+            </div>
+        </div>
     </div>
 
     <script>
@@ -236,6 +258,24 @@
                 }
             });
 
+            // 갤러리 실시간 동기화
+            roomRef.child('gallery').on('value', (snapshot) => {
+                const galleryGrid = document.getElementById('galleryGrid');
+                const val = snapshot.val();
+                if (val) {
+                    galleryGrid.innerHTML = "";
+                    const items = Object.values(val).reverse(); // 최신 작품이 위로
+                    items.forEach(item => {
+                        galleryGrid.innerHTML += `
+                            <div class="gallery-item">
+                                <img src="${item.image}">
+                                <div class="gallery-item-title">${item.topic} (${item.date})</div>
+                            </div>
+                        `;
+                    });
+                }
+            });
+
             initCanvas();
             sendSystemChat(`${myName} 님이 입장하셨습니다!`);
         }
@@ -315,8 +355,29 @@
         function endGame() {
             document.getElementById('gameScreen').style.display = 'none';
             document.getElementById('resultScreen').style.display = 'block';
-            document.getElementById('resultTopic').innerText = document.getElementById('topicDisplay').innerText;
-            document.getElementById('resultImage').src = canvas.toDataURL();
+            const topicText = document.getElementById('topicDisplay').innerText;
+            document.getElementById('resultTopic').innerText = topicText;
+            const imgData = canvas.toDataURL();
+            document.getElementById('resultImage').src = imgData;
+
+            // 🖼️ 완공작 자동으로 방 갤러리에 저장
+            if (roomRef) {
+                const now = new Date();
+                const timeStr = `${now.getHours()}:${String(now.getMinutes()).padStart(2, '0')}`;
+                roomRef.child('gallery').push({
+                    topic: topicText,
+                    image: imgData,
+                    date: timeStr
+                });
+            }
+        }
+
+        function openGallery() {
+            document.getElementById('galleryModal').style.display = 'flex';
+        }
+
+        function closeGallery() {
+            document.getElementById('galleryModal').style.display = 'none';
         }
 
         function initCanvas() {
