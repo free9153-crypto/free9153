@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PLAVE Bubble Archive</title>
+<style>
+:root{--bg:#f7f5fc;--ink:#29263a;--muted:#777286;--line:#e8e4f0;--accent:#7966c8;--soft:#eeeaff}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font-family:system-ui,-apple-system,"Noto Sans KR",sans-serif}
+header{padding:24px 16px;text-align:center;background:linear-gradient(130deg,#e8e3ff,#ffeaf2)}header h1{font-size:23px;margin:0}header p{font-size:13px;color:#686276;margin:7px 0 0}
+main{max-width:900px;margin:18px auto;padding:0 14px 40px}.panel,.entry{background:#fff;border:1px solid var(--line);border-radius:17px;padding:16px;margin-bottom:14px;box-shadow:0 3px 14px #31235a08}
+h2{font-size:16px;margin:0 0 12px}label{display:block;font-size:12px;color:var(--muted);margin:9px 0 5px}
+input,select,textarea,button{font:inherit}input,select,textarea{width:100%;padding:11px;border:1px solid var(--line);border-radius:10px;background:white;color:var(--ink)}textarea{min-height:75px;resize:vertical}
+button{border:0;border-radius:10px;padding:10px 13px;background:var(--accent);color:white;font-weight:650;cursor:pointer}button.soft{background:var(--soft);color:#55479c}button.gray{background:#f0eff4;color:#514e60}button.red{background:#fff0f2;color:#b54761}
+.row{display:grid;grid-template-columns:1fr 1fr;gap:10px}.actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}.hint{font-size:12px;line-height:1.5;color:var(--muted);margin:9px 0 0}
+.toolbar{display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:8px}
+.entry-head{display:flex;justify-content:space-between;gap:8px;align-items:center}.tag{font-size:11px;background:var(--soft);color:#594ca3;padding:5px 9px;border-radius:20px}
+.entry h3{font-size:15px;margin:8px 0 4px}.meta{font-size:11px;color:var(--muted)}.memo{white-space:pre-wrap;font-size:13px;line-height:1.55;margin-top:9px}
+.photos{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.photos img{max-width:31%;max-height:210px;object-fit:contain;background:#f7f6fa;border-radius:8px}
+.heart{background:transparent;color:#d35c7d;padding:3px 7px;font-size:20px}.empty{text-align:center;padding:28px;color:var(--muted);font-size:13px}
+#preview{display:flex;gap:7px;flex-wrap:wrap;margin-top:8px}#preview img{width:70px;height:85px;object-fit:cover;border-radius:8px}
+.hidden{display:none!important}.printTitle{display:none}
+@media(max-width:600px){.row,.toolbar{grid-template-columns:1fr}.panel{padding:13px}.photos img{max-width:30%}}
+@media print{body{background:#fff}header,.no-print,footer{display:none!important}main{padding:0;margin:0}.entry{border:0;border-bottom:1px solid #ddd;box-shadow:none;break-inside:avoid}.photos img{max-height:230px;max-width:45%}.printTitle{display:block;text-align:center;padding:15px}}
+</style></head>
+<body>
+<header><h1>💜 PLAVE Bubble Archive</h1><p>나만의 소중한 버블 기록 보관함</p></header>
+<main>
+<section id="lockPanel" class="panel">
+ <h2 id="lockTitle">🔐 보관함 비밀번호 설정</h2>
+ <p id="lockText" class="hint">처음 사용할 때 비밀번호를 설정해줘. 이후에는 비밀번호를 입력해야 보관함을 열 수 있어.</p>
+ <label for="password">비밀번호 (8자 이상 권장)</label><input id="password" type="password" autocomplete="current-password" placeholder="비밀번호 입력">
+ <div id="confirmWrap"><label for="confirmPassword">비밀번호 확인</label><input id="confirmPassword" type="password" autocomplete="new-password" placeholder="비밀번호 다시 입력"></div>
+ <div class="actions"><button id="unlockBtn">보관함 시작하기</button></div>
+ <p class="hint">중요: 비밀번호를 잊으면 암호화된 기록을 복구할 수 없어. 비밀번호를 안전한 곳에 따로 적어둬!</p>
+</section>
+<div id="app" class="hidden">
+ <section class="panel no-print">
+  <div class="entry-head"><h2>✍️ 버블 기록 추가</h2><button id="lockNow" class="gray">잠그기</button></div>
+  <div class="row"><div><label>멤버</label><select id="member"><option>예준</option><option>노아</option><option>밤비</option><option>은호</option><option>하민</option></select></div><div><label>날짜</label><input id="date" type="date"></div></div>
+  <label>제목</label><input id="title" placeholder="예: 오늘의 다정한 버블">
+  <label>내용 / 나만의 메모</label><textarea id="memo" placeholder="기억하고 싶은 내용을 적어줘"></textarea>
+  <label>스크린샷 첨부 (여러 장 가능)</label><input id="images" type="file" accept="image/*" multiple><div id="preview"></div>
+  <div class="actions"><button id="saveBtn">기록 저장하기</button><button id="clearForm" class="soft">입력 비우기</button></div>
+ </section>
+ <section class="panel no-print">
+  <h2>📚 내 보관함</h2>
+  <div class="toolbar"><input id="search" placeholder="제목·내용·메모 검색"><select id="filterMember"><option value="">모든 멤버</option><option>예준</option><option>노아</option><option>밤비</option><option>은호</option><option>하민</option></select><select id="filterMode"><option value="all">전체 기록</option><option value="fav">즐겨찾기만</option></select></div>
+  <div class="actions"><button id="pdfBtn" class="soft">현재 목록 PDF / 인쇄</button></div>
+  <div id="results"></div>
+ </section>
+ <section class="panel no-print">
+  <h2>🧳 백업과 복원</h2>
+  <p class="hint">백업 파일은 사진과 기록을 모두 포함하며 비밀번호로 암호화돼. 다른 기기에서 복원할 때도 이 앱과 백업 비밀번호가 필요해.</p>
+  <div class="actions"><button id="backupBtn">암호화 백업 내보내기</button><button id="restoreBtn" class="soft">백업 파일 복원하기</button><input id="backupFile" class="hidden" type="file" accept=".plavebackup,.json,application/json"></div>
+  <div class="actions"><button id="changePass" class="gray">비밀번호 변경</button><button id="deleteAll" class="red">보관함 전체 삭제</button></div>
+  <p class="hint">보안 안내: 기록은 이 브라우저에 암호화해 저장돼. 브라우저 데이터 삭제 전에 백업해줘. 비밀번호를 잊으면 복구할 수 없어.</p>
+ </section>
+</div>
+</main><div id="printArea" class="printTitle">PLAVE Bubble Archive</div>
+<script>
+const DB='plaveBubbleVault',STORE='vault',KEY='main';
+let db,records=[],cryptoKey=null,photos=[];
+const $=id=>document.getElementById(id);
+const enc=new TextEncoder(),dec=new TextDecoder();
+function b64(buf){return btoa(String.fromCharCode(...new Uint8Array(buf)))}
+function un64(s){return Uint8Array.from(atob(s),c=>c.charCodeAt(0))}
+function openDB(){return new Promise((res,rej)=>{let r=indexedDB.open(DB,1);r.onupgradeneeded=()=>r.result.createObjectStore(STORE);r.onsuccess=()=>res(r.result);r.onerror=()=>rej(r.error)})}
+function getVault(){return new Promise((res,rej)=>{let r=db.transaction(STORE).objectStore(STORE).get(KEY);r.onsuccess=()=>res(r.result||null);r.onerror=()=>rej(r.error)})}
+function putVault(v){return new Promise((res,rej)=>{let t=db.transaction(STORE,'readwrite');t.objectStore(STORE).put(v,KEY);t.oncomplete=()=>res();t.onerror=()=>rej(t.error)})}
+async function derive(pass,salt){let material=await crypto.subtle.importKey('raw',enc.encode(pass),'PBKDF2',false,['deriveKey']);return crypto.subtle.deriveKey({name:'PBKDF2',salt,iterations:250000,hash:'SHA-256'},material,{name:'AES-GCM',length:256},false,['encrypt','decrypt'])}
+async function encryptData(data,pass){let salt=crypto.getRandomValues(new Uint8Array(16)),iv=crypto.getRandomValues(new Uint8Array(12)),key=await derive(pass,salt),cipher=await crypto.subtle.encrypt({name:'AES-GCM',iv},key,enc.encode(JSON.stringify(data)));return {version:1,salt:b64(salt),iv:b64(iv),data:b64(cipher)}}
+async function decryptData(blob,pass){let key=await derive(pass,un64(blob.salt));let plain=await crypto.subtle.decrypt({name:'AES-GCM',iv:un64(blob.iv)},key,un64(blob.data));return JSON.parse(dec.decode(plain))}
+async function saveVault(){await putVault(await encryptData({records},sessionPass))}
+let sessionPass='';
+function setupMode(exists){$('lockTitle').textContent=exists?'🔐 보관함 잠금 해제':'🔐 보관함 비밀번호 설정';$('lockText').textContent=exists?'비밀번호를 입력하면 보관함이 열려.':'처음 사용할 때 비밀번호를 설정해줘. 이후에는 비밀번호를 입력해야 보관함을 열 수 있어.';$('confirmWrap').classList.toggle('hidden',exists);$('unlockBtn').textContent=exists?'잠금 해제':'보관함 시작하기'}
+async function unlock(){let p=$('password').value;if(!p)return alert('비밀번호를 입력해줘.');let blob=await getVault();try{if(blob){let data=await decryptData(blob,p);records=Array.isArray(data.records)?data.records:[]}else{if(p.length<8)return alert('비밀번호는 8자 이상으로 설정해줘.');if(p!==$('confirmPassword').value)return alert('비밀번호가 서로 달라.');records=[];await putVault(await encryptData({records},p))}sessionPass=p;$('password').value='';$('confirmPassword').value='';$('lockPanel').classList.add('hidden');$('app').classList.remove('hidden');render()}catch(e){alert('비밀번호가 맞지 않거나 백업 데이터가 손상됐어. 다시 확인해줘.')}}
+function lock(){sessionPass='';records=[];photos=[];$('app').classList.add('hidden');$('lockPanel').classList.remove('hidden');$('password').value='';setupMode(true)}
+function fileData(file){return new Promise((res,rej)=>{let r=new FileReader();r.onload=()=>res(r.result);r.onerror=rej;r.readAsDataURL(file)})}
+$('images').addEventListener('change',async e=>{photos=await Promise.all([...e.target.files].map(fileData));$('preview').innerHTML='';photos.forEach(src=>{let im=document.createElement('img');im.src=src;$('preview').append(im)})});
+function clearForm(){$('title').value='';$('memo').value='';$('images').value='';$('preview').innerHTML='';photos=[];$('date').value=new Date().toISOString().slice(0,10)}
+$('clearForm').onclick=clearForm;
+$('saveBtn').onclick=async()=>{let date=$('date').value;if(!date)return alert('날짜를 선택해줘.');if(!$('title').value.trim()&&!$('memo').value.trim()&&!photos.length)return alert('내용이나 사진을 하나 이상 추가해줘.');records.unshift({id:Date.now(),member:$('member').value,date,title:$('title').value.trim(),memo:$('memo').value.trim(),photos:[...photos],favorite:false});await saveVault();clearForm();render();alert('기록을 안전하게 저장했어!')};
+function render(){let q=$('search').value.toLowerCase(),m=$('filterMember').value,f=$('filterMode').value;let list=records.filter(r=>(!m||r.member===m)&&(f!=='fav'||r.favorite)&&(`${r.title} ${r.memo} ${r.member} ${r.date}`).toLowerCase().includes(q));$('results').innerHTML='';if(!list.length){$('results').innerHTML='<div class="empty">아직 기록이 없거나 검색 결과가 없어 🌷</div>';return}list.forEach(r=>{let el=document.createElement('article');el.className='entry';let head=document.createElement('div');head.className='entry-head';let tag=document.createElement('span');tag.className='tag';tag.textContent=r.member;let fav=document.createElement('button');fav.className='heart';fav.textContent=r.favorite?'♥':'♡';fav.title='즐겨찾기';fav.onclick=async()=>{r.favorite=!r.favorite;await saveVault();render()};head.append(tag,fav);el.append(head);let h=document.createElement('h3');h.textContent=r.title||'(제목 없음)';el.append(h);let meta=document.createElement('div');meta.className='meta';meta.textContent=r.date;el.append(meta);if(r.memo){let p=document.createElement('div');p.className='memo';p.textContent=r.memo;el.append(p)}if(r.photos?.length){let pics=document.createElement('div');pics.className='photos';r.photos.forEach(src=>{let im=document.createElement('img');im.src=src;im.alt='버블 캡처';im.onclick=()=>window.open(src,'_blank');pics.append(im)});el.append(pics)}let acts=document.createElement('div');acts.className='actions no-print';let del=document.createElement('button');del.className='red';del.textContent='이 기록 삭제';del.onclick=async()=>{if(confirm('이 기록을 삭제할까?')){records=records.filter(x=>x.id!==r.id);await saveVault();render()}};acts.append(del);el.append(acts);$('results').append(el)})}
+['search','filterMember','filterMode'].forEach(id=>$(id).addEventListener('input',render));
+$('pdfBtn').onclick=()=>{let title=$('printArea');title.style.display='block';window.print();setTimeout(()=>title.style.display='',500)};
+$('backupBtn').onclick=async()=>{try{let blob=await encryptData({records,exportedAt:new Date().toISOString()},sessionPass);let file=new Blob([JSON.stringify({app:'PLAVE Bubble Archive',...blob})],{type:'application/json'});let a=document.createElement('a');a.href=URL.createObjectURL(file);a.download='PLAVE_Bubble_Archive_Backup.plavebackup';a.click();URL.revokeObjectURL(a.href)}catch(e){alert('백업 파일을 만들지 못했어.')}}
+$('restoreBtn').onclick=()=>$('backupFile').click();
+$('backupFile').onchange=async e=>{let file=e.target.files[0];if(!file)return;try{let raw=JSON.parse(await file.text());let p=prompt('이 백업을 만들 때 사용한 비밀번호를 입력해줘.');if(p===null)return;let data=await decryptData(raw,p);if(!Array.isArray(data.records))throw Error('format');if(!confirm(`백업의 ${data.records.length}개 기록을 현재 보관함에 추가할까? 같은 ID의 기록은 중복되지 않게 할게.`))return;let ids=new Set(records.map(x=>x.id));records=[...records,...data.records.filter(x=>!ids.has(x.id))];await saveVault();render();alert('복원 완료!')}catch(err){alert('복원에 실패했어. 백업 파일과 백업 비밀번호를 확인해줘.')}finally{e.target.value=''}};
+$('changePass').onclick=async()=>{let old=prompt('현재 비밀번호를 입력해줘.');if(old===null)return;try{let blob=await getVault();let data=await decryptData(blob,old);let next=prompt('새 비밀번호를 입력해줘. (8자 이상)');if(next===null)return;if(next.length<8)return alert('새 비밀번호는 8자 이상이어야 해.');let again=prompt('새 비밀번호를 한 번 더 입력해줘.');if(next!==again)return alert('새 비밀번호가 서로 달라.');sessionPass=next;records=data.records||[];await saveVault();alert('비밀번호를 변경했어!')}catch(e){alert('현재 비밀번호가 맞지 않아.')}};
+$('deleteAll').onclick=async()=>{if(!confirm('모든 기록과 사진을 영구 삭제할까? 먼저 백업했는지 확인해줘.'))return;if(!confirm('정말 전체 삭제할까? 이 작업은 되돌릴 수 없어.'))return;records=[];await saveVault();render();alert('보관함을 비웠어.')};
+$('lockNow').onclick=lock;$('unlockBtn').onclick=unlock;
+(async()=>{if(!window.crypto?.subtle||!window.indexedDB){alert('이 브라우저에서는 보안 저장 기능을 사용할 수 없어. 최신 Chrome에서 열어줘.');return}db=await openDB();setupMode(!!(await getVault()));$('date').value=new Date().toISOString().slice(0,10)})().catch(e=>alert('저장소를 여는 중 오류가 발생했어: '+e.message));
+</script></body></html>
