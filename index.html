@@ -1,0 +1,336 @@
+<title>플레이브 영상첩</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Black+Han+Sans&family=Noto+Sans+KR:wght@400;500;700&display=swap">
+<style>
+/* Layout: a five-colour spine (예준 파랑 · 노아 보라 · 밤비 분홍 · 은호 빨강 · 하민 검정) over a member selector; saved videos list below, add form in a collapsible panel. */
+:root{
+  --bg:#f3f3f9; --surface:#ffffff; --fg:#17172b; --muted:#5d5d78; --line:#dcdcea; --focus:#3b6cf0; --on:#ffffff;
+  --c1:#3b6cf0; --c2:#8a4fd8; --c3:#e4508f; --c4:#d93a40; --c5:#2a2a36;
+  --font-d:'Black Han Sans','Noto Sans KR',system-ui,sans-serif;
+  --font-b:'Noto Sans KR',system-ui,-apple-system,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0f1020; --surface:#1a1b30; --fg:#ecebfa; --muted:#a4a4c0; --line:#2f3050; --focus:#8fb0ff; --on:#0f1020;
+    --c1:#6c93ff; --c2:#b088f5; --c3:#ff7fb5; --c4:#ff6b70; --c5:#cfcfe0; color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0f1020; --surface:#1a1b30; --fg:#ecebfa; --muted:#a4a4c0; --line:#2f3050; --focus:#8fb0ff; --on:#0f1020;
+  --c1:#6c93ff; --c2:#b088f5; --c3:#ff7fb5; --c4:#ff6b70; --c5:#cfcfe0; color-scheme:dark;
+}
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--font-b);font-size:15px;line-height:1.55;
+  padding-block:0 40px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.wrap{max-width:760px;margin:0 auto;display:flex;flex-direction:column;gap:18px}
+.m1{--mc:var(--c1)}.m2{--mc:var(--c2)}.m3{--mc:var(--c3)}.m4{--mc:var(--c4)}.m5{--mc:var(--c5)}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+header{padding-top:22px;display:flex;flex-direction:column;gap:12px}
+.spine{display:flex;height:8px;border-radius:2px;overflow:hidden}
+.spine i{flex:1}
+h1{font-family:var(--font-d);font-weight:400;font-size:clamp(30px,8vw,44px);line-height:1.1;margin:0;letter-spacing:-.01em;text-wrap:balance}
+.sub{margin:0;color:var(--muted);font-size:14px}
+.tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+@media (min-width:600px){.tabs{grid-template-columns:repeat(6,1fr)}}
+.tab{min-width:0;background:var(--surface);border:1px solid var(--line);border-top:5px solid var(--mc,var(--fg));border-radius:6px;
+  padding:8px 6px 9px;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:0;text-align:center}
+.tab b{font-family:var(--font-d);font-weight:400;font-size:19px;line-height:1.25}
+.tab span{font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.tab[aria-pressed="true"]{background:var(--mc,var(--fg));border-color:var(--mc,var(--fg));color:var(--on)}
+.tab[aria-pressed="true"] span{color:var(--on);opacity:.85}
+.tab.all{--mc:var(--fg)}
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:14px;display:flex;flex-direction:column;gap:10px}
+.panel h2{margin:0;font-size:13px;font-weight:700;letter-spacing:.06em;color:var(--muted)}
+.who{display:flex;flex-wrap:wrap;gap:4px 12px;align-items:baseline}
+.who strong{font-family:var(--font-d);font-weight:400;font-size:22px;color:var(--mc,var(--fg))}
+.who span{color:var(--muted);font-size:14px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+a.chip,button.chip{display:inline-flex;align-items:center;min-height:36px;padding:4px 12px;border:1px solid var(--line);border-radius:999px;
+  background:transparent;text-decoration:none;color:var(--fg);font-size:14px;cursor:pointer}
+a.chip:hover,button.chip:hover{border-color:var(--fg)}
+.note{margin:0;color:var(--muted);font-size:13px}
+.bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.bar .grow{flex:1 1 180px;min-width:0}
+input[type=text],input[type=search],input[type=url],select,textarea{width:100%;min-height:44px;padding:9px 12px;border:1px solid var(--line);border-radius:6px;background:var(--bg)}
+textarea{min-height:70px;resize:vertical}
+label.f{display:flex;flex-direction:column;gap:5px;font-size:13px;font-weight:500;color:var(--muted)}
+.check{display:inline-flex;align-items:center;gap:8px;min-height:44px;font-size:14px;cursor:pointer}
+.check input{width:20px;height:20px;accent-color:var(--fg)}
+.primary{min-height:46px;padding:8px 18px;border:0;border-radius:6px;background:var(--fg);color:var(--bg);font-weight:700;cursor:pointer}
+.ghost{min-height:44px;padding:8px 14px;border:1px solid var(--line);border-radius:6px;background:transparent;cursor:pointer}
+.row2{display:grid;grid-template-columns:1fr;gap:12px}
+@media (min-width:560px){.row2{grid-template-columns:1fr 1fr}}
+.pick{display:flex;flex-wrap:wrap;gap:8px}
+.pick button{min-height:40px;padding:4px 14px;border-radius:6px;border:2px solid var(--mc,var(--fg));background:transparent;font-weight:700;cursor:pointer}
+.pick button[aria-pressed="true"]{background:var(--mc,var(--fg));color:var(--on)}
+.err{color:var(--c4);font-size:13px;min-height:1.2em;margin:0}
+.list{display:flex;flex-direction:column;gap:10px}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:8px;display:grid;grid-template-columns:8px 1fr;overflow:hidden}
+.card .stripe{display:flex;flex-direction:column}
+.card .stripe i{flex:1;background:var(--mc)}
+.card .body{padding:12px 14px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.card h3{margin:0;font-size:16px;line-height:1.4;font-weight:700;overflow-wrap:anywhere}
+.card.seen h3{color:var(--muted);font-weight:500}
+.meta{display:flex;flex-wrap:wrap;gap:6px 8px;align-items:center;font-size:12px;color:var(--muted)}
+.tag{display:inline-block;padding:1px 9px;border-radius:999px;font-size:12px;font-weight:700;background:var(--mc);color:var(--on)}
+.cat{padding:1px 8px;border:1px solid var(--line);border-radius:4px}
+.memo{margin:0;font-size:14px;color:var(--fg);overflow-wrap:anywhere;white-space:pre-wrap}
+.acts{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.acts a,.acts button{min-height:40px;padding:4px 14px;border-radius:6px;border:1px solid var(--line);background:transparent;text-decoration:none;color:var(--fg);font-size:14px;display:inline-flex;align-items:center;cursor:pointer}
+.acts a.open{background:var(--fg);color:var(--bg);border-color:var(--fg);font-weight:700}
+.acts .del{margin-left:auto;color:var(--muted)}
+.acts .del.sure{color:var(--c4);border-color:var(--c4)}
+.empty{text-align:center;color:var(--muted);padding:26px 12px;border:1px dashed var(--line);border-radius:8px;display:flex;flex-direction:column;gap:6px}
+.empty b{color:var(--fg);font-size:16px}
+.foot{font-size:12px;color:var(--muted)}
+#toast{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:6px;font-size:14px;max-width:calc(100% - 32px);z-index:20}
+#toast[hidden]{display:none}
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="spine" aria-hidden="true"><i style="background:var(--c1)"></i><i style="background:var(--c2)"></i><i style="background:var(--c3)"></i><i style="background:var(--c4)"></i><i style="background:var(--c5)"></i></div>
+    <h1>플레이브 영상첩</h1>
+    <p class="sub">보고 싶은 영상을 멤버별로 모아 두고, 본 영상은 체크해서 정리해요.</p>
+  </header>
+
+  <nav class="tabs" id="tabs" aria-label="멤버 선택"></nav>
+
+  <section class="panel" id="who-panel" aria-live="polite"></section>
+
+  <section class="panel">
+    <div class="bar">
+      <button class="primary" id="toggle-add" type="button" aria-expanded="false" aria-controls="add-form">영상 추가</button>
+      <span class="note" id="mode-note"></span>
+    </div>
+    <form id="add-form" hidden autocomplete="off">
+      <div style="display:flex;flex-direction:column;gap:12px">
+        <label class="f" for="f-url">유튜브 주소
+          <input id="f-url" type="url" inputmode="url" placeholder="https://www.youtube.com/watch?v=… 또는 youtu.be/…">
+        </label>
+        <label class="f" for="f-title">제목
+          <input id="f-title" type="text" maxlength="140" placeholder="영상 제목을 붙여 넣어 주세요">
+        </label>
+        <div class="f" role="group" aria-labelledby="pick-label">
+          <span id="pick-label">나오는 멤버</span>
+          <div class="pick" id="pick"></div>
+        </div>
+        <div class="row2">
+          <label class="f" for="f-cat">종류
+            <select id="f-cat"></select>
+          </label>
+          <label class="f" for="f-memo">메모 (선택)
+            <textarea id="f-memo" maxlength="300" placeholder="몇 분부터 보면 좋은지, 기억해 둘 장면 등"></textarea>
+          </label>
+        </div>
+        <p class="err" id="f-err" role="alert"></p>
+        <div class="bar">
+          <button class="primary" type="submit">저장</button>
+          <button class="ghost" type="button" id="cancel-add">닫기</button>
+        </div>
+      </div>
+    </form>
+  </section>
+
+  <section class="panel">
+    <div class="bar">
+      <input class="grow" id="q" type="search" placeholder="제목·메모 검색" aria-label="제목·메모 검색">
+      <select id="cat-filter" aria-label="종류로 거르기" style="width:auto;flex:0 1 150px"></select>
+      <label class="check" for="unseen"><input id="unseen" type="checkbox">안 본 영상만</label>
+    </div>
+  </section>
+
+  <section class="list" id="list" aria-live="polite"></section>
+  <p class="foot" id="foot"></p>
+</div>
+<div id="toast" role="status" hidden></div>
+
+<script>
+(function(){
+  var MEMBERS=[
+    {k:1,name:'예준',role:'리더 · 보컬 · 프로듀서'},
+    {k:2,name:'노아',role:'보컬 · 프로듀서'},
+    {k:3,name:'밤비',role:'보컬 · 댄서 · 안무'},
+    {k:4,name:'은호',role:'래퍼 · 보컬 · 프로듀서'},
+    {k:5,name:'하민',role:'래퍼 · 댄서 · 안무'}
+  ];
+  var CATS=['라이브','라쓰고 플레이브','커버·댄스','MV·퍼포먼스','숏츠','기타'];
+  var videos=[], loaded=false, slow=false, mode='loading', col=null;
+  var filter=0, picked={}, delArm=null;
+
+  function $(id){return document.getElementById(id)}
+  function h(tag,cls,text){var e=document.createElement(tag);if(cls)e.className=cls;if(text!=null)e.textContent=text;return e}
+  function mem(k){return MEMBERS[k-1]}
+  function toast(msg){var t=$('toast');t.textContent=msg;t.hidden=false;clearTimeout(toast._t);toast._t=setTimeout(function(){t.hidden=true},2600)}
+  function yt(q){return 'https://www.youtube.com/results?search_query='+encodeURIComponent(q)}
+
+  function parseYT(s){
+    try{
+      var u=new URL(String(s).trim()), host=u.hostname.replace(/^www\.|^m\./,''), id='';
+      if(host==='youtu.be'){id=u.pathname.slice(1).split('/')[0]}
+      else if(host==='youtube.com'||host==='music.youtube.com'){
+        if(u.pathname==='/watch'){id=u.searchParams.get('v')||''}
+        else{var m=u.pathname.match(/^\/(shorts|live|embed)\/([\w-]{6,})/);if(m)id=m[2]}
+      }
+      return /^[\w-]{6,20}$/.test(id)?id:'';
+    }catch(e){return ''}
+  }
+
+  /* ---------- storage: shared db when available, otherwise this browser ---------- */
+  function localLoad(){try{var a=JSON.parse(localStorage.getItem('plave-videos')||'[]');return Array.isArray(a)?a:[]}catch(e){return []}}
+  function localSave(){try{localStorage.setItem('plave-videos',JSON.stringify(videos))}catch(e){}}
+  function goLocal(){mode='local';videos=localLoad();loaded=true;slow=false;render()}
+
+  async function initStore(){
+    var db=null;
+    try{db=await (window.claude&&window.claude.use?window.claude.use('db'):null)}catch(e){db=null}
+    if(!db){goLocal();return}
+    mode='db';col=db.collection('videos');
+    var t=setTimeout(function(){slow=true;render()},10000);
+    col.onSnapshot(function(snap){
+      clearTimeout(t);slow=false;
+      videos=snap.docs.map(function(d){var o=d.data()||{};o.id=d.id;return o});
+      videos.sort(function(a,b){return String(b.addedAt||'').localeCompare(String(a.addedAt||''))});
+      loaded=true;render();
+    },function(){clearTimeout(t);goLocal()});
+  }
+  async function saveNew(o){
+    if(mode==='db'){await col.add(o)}
+    else{o.id='l'+Date.now().toString(36);videos.unshift(o);localSave();render()}
+  }
+  async function setSeen(v,val){
+    if(mode==='db'){await col.doc(v.id).update({watched:val})}
+    else{v.watched=val;localSave();render()}
+  }
+  async function remove(v){
+    if(mode==='db'){await col.doc(v.id).delete()}
+    else{videos=videos.filter(function(x){return x.id!==v.id});localSave();render()}
+  }
+
+  /* ---------- rendering ---------- */
+  function renderTabs(){
+    var box=$('tabs');box.textContent='';
+    var all=h('button','tab all');all.type='button';all.setAttribute('aria-pressed',filter===0?'true':'false');
+    all.appendChild(h('b',null,'전체'));all.appendChild(h('span',null,videos.length+'개'));
+    all.onclick=function(){filter=0;delArm=null;render()};box.appendChild(all);
+    MEMBERS.forEach(function(m){
+      var n=videos.filter(function(v){return (v.members||[]).indexOf(m.k)>=0}).length;
+      var b=h('button','tab m'+m.k);b.type='button';b.setAttribute('aria-pressed',filter===m.k?'true':'false');
+      b.appendChild(h('b',null,m.name));b.appendChild(h('span',null,n+'개'));
+      b.onclick=function(){filter=m.k;delArm=null;render()};box.appendChild(b);
+    });
+  }
+  function renderWho(){
+    var p=$('who-panel');p.textContent='';
+    var base=filter?('플레이브 '+mem(filter).name):'플레이브';
+    if(filter){
+      p.className='panel m'+filter;
+      var w=h('div','who');w.appendChild(h('strong',null,mem(filter).name));w.appendChild(h('span',null,mem(filter).role));p.appendChild(w);
+    }else{
+      p.className='panel';
+      var w2=h('div','who');w2.appendChild(h('strong',null,'다섯 멤버 전체'));w2.appendChild(h('span',null,'예준 · 노아 · 밤비 · 은호 · 하민'));p.appendChild(w2);
+    }
+    p.appendChild(h('h2',null,'유튜브에서 찾기'));
+    var c=h('div','chips');
+    var qs=filter?[['라이브 풀버전',base+' 라이브 풀버전'],['커버',base+' 커버'],['숏츠',base+' 숏츠'],['라쓰고 플레이브',base+' 라쓰고 플레이브']]
+                 :[['플레이브 공식','플레이브 공식 유튜브'],['라쓰고 플레이브','라쓰고 플레이브'],['라이브 풀버전','플레이브 라이브 풀버전'],['커버','플레이브 커버']];
+    qs.forEach(function(q){var a=h('a','chip',q[0]);a.href=yt(q[1]);a.target='_blank';a.rel='noopener noreferrer';c.appendChild(a)});
+    p.appendChild(c);
+    p.appendChild(h('p','note','검색 결과는 유튜브에서 열려요. 마음에 드는 영상은 주소를 복사해 아래 “영상 추가”에 저장하세요.'));
+  }
+  function visible(){
+    var q=$('q').value.trim().toLowerCase(), cf=$('cat-filter').value, un=$('unseen').checked;
+    return videos.filter(function(v){
+      if(filter&&(v.members||[]).indexOf(filter)<0)return false;
+      if(cf&&v.cat!==cf)return false;
+      if(un&&v.watched)return false;
+      if(q&&((v.title||'')+' '+(v.memo||'')).toLowerCase().indexOf(q)<0)return false;
+      return true;
+    });
+  }
+  function card(v){
+    var first=(v.members||[])[0]||5;
+    var c=h('article','card m'+first+(v.watched?' seen':''));
+    var stripe=h('div','stripe');
+    (v.members&&v.members.length?v.members:[first]).forEach(function(k){var i=h('i','m'+k);i.style.background='var(--mc)';stripe.appendChild(i)});
+    c.appendChild(stripe);
+    var body=h('div','body');
+    body.appendChild(h('h3',null,v.title||'제목 없음'));
+    var meta=h('div','meta');
+    (v.members||[]).forEach(function(k){meta.appendChild(h('span','tag m'+k,mem(k).name))});
+    if(v.cat)meta.appendChild(h('span','cat',v.cat));
+    if(v.addedAt){var d=new Date(v.addedAt);if(!isNaN(d))meta.appendChild(h('span',null,d.toLocaleDateString('ko-KR',{month:'long',day:'numeric'})+' 저장'))}
+    body.appendChild(meta);
+    if(v.memo)body.appendChild(h('p','memo',v.memo));
+    var acts=h('div','acts');
+    var open=h('a','open','유튜브에서 보기');open.href='https://www.youtube.com/watch?v='+encodeURIComponent(v.vid||'');open.target='_blank';open.rel='noopener noreferrer';acts.appendChild(open);
+    var seen=h('button',null,v.watched?'✓ 봤어요':'봤어요 표시');seen.type='button';seen.setAttribute('aria-pressed',v.watched?'true':'false');
+    seen.onclick=function(){setSeen(v,!v.watched).catch(function(){toast('저장하지 못했어요. 잠시 뒤 다시 시도해 주세요.')})};acts.appendChild(seen);
+    var del=h('button','del'+(delArm===v.id?' sure':''),delArm===v.id?'한 번 더 눌러 삭제':'삭제');del.type='button';
+    del.onclick=function(){
+      if(delArm===v.id){delArm=null;remove(v).catch(function(){toast('삭제하지 못했어요.')});}
+      else{delArm=v.id;render();clearTimeout(renderTabs._t);renderTabs._t=setTimeout(function(){delArm=null;render()},3500)}
+    };acts.appendChild(del);
+    body.appendChild(acts);c.appendChild(body);return c;
+  }
+  function renderList(){
+    var box=$('list');box.textContent='';
+    if(!loaded){var e=h('div','empty');e.appendChild(h('b',null,'불러오는 중…'));if(slow)e.appendChild(h('span',null,'저장소에 아직 닿지 못했어요. 네트워크를 확인해 주세요.'));box.appendChild(e);return}
+    var list=visible();
+    if(!videos.length){
+      var e2=h('div','empty');e2.appendChild(h('b',null,'아직 저장한 영상이 없어요'));
+      e2.appendChild(h('span',null,'위의 “유튜브에서 찾기”로 영상을 찾고, 주소를 복사해 “영상 추가”에 붙여 넣으세요.'));box.appendChild(e2);return;
+    }
+    if(!list.length){var e3=h('div','empty');e3.appendChild(h('b',null,'조건에 맞는 영상이 없어요'));e3.appendChild(h('span',null,'멤버 탭, 검색어, 필터를 바꿔 보세요.'));box.appendChild(e3);return}
+    list.forEach(function(v){box.appendChild(card(v))});
+  }
+  function render(){
+    renderTabs();renderWho();renderList();
+    $('mode-note').textContent=mode==='db'?'이 페이지에 저장돼요':(mode==='local'?'내 브라우저에만 저장돼요':'');
+    $('foot').textContent=loaded?('저장한 영상 '+videos.length+'개 · 본 영상 '+videos.filter(function(v){return v.watched}).length+'개'):'';
+  }
+
+  /* ---------- form ---------- */
+  function buildPick(){
+    var box=$('pick');box.textContent='';
+    MEMBERS.forEach(function(m){
+      var b=h('button','m'+m.k,m.name);b.type='button';b.setAttribute('aria-pressed',picked[m.k]?'true':'false');
+      b.onclick=function(){picked[m.k]=!picked[m.k];buildPick()};box.appendChild(b);
+    });
+    var g=h('button','m5','단체');g.type='button';g.style.setProperty('--mc','var(--fg)');
+    g.onclick=function(){MEMBERS.forEach(function(m){picked[m.k]=true});buildPick()};box.appendChild(g);
+  }
+  function openForm(on){
+    var f=$('add-form');f.hidden=!on;$('toggle-add').setAttribute('aria-expanded',on?'true':'false');
+    if(on){picked={};if(filter)picked[filter]=true;buildPick();$('f-err').textContent='';$('f-url').focus()}
+  }
+  $('toggle-add').onclick=function(){openForm($('add-form').hidden)};
+  $('cancel-add').onclick=function(){openForm(false)};
+  $('add-form').onsubmit=function(ev){
+    ev.preventDefault();
+    var err=$('f-err'),vid=parseYT($('f-url').value);
+    if(!vid){err.textContent='유튜브 영상 주소를 확인해 주세요. (youtube.com/watch, youtu.be, shorts 주소를 지원해요)';return}
+    var ms=MEMBERS.map(function(m){return m.k}).filter(function(k){return picked[k]});
+    if(!ms.length){err.textContent='나오는 멤버를 한 명 이상 골라 주세요.';return}
+    if(videos.some(function(v){return v.vid===vid})){err.textContent='이미 저장한 영상이에요.';return}
+    var title=$('f-title').value.trim()||('제목 없음 · '+vid);
+    var o={vid:vid,title:title,members:ms,cat:$('f-cat').value,memo:$('f-memo').value.trim(),watched:false,addedAt:new Date().toISOString()};
+    err.textContent='';
+    saveNew(o).then(function(){
+      $('f-url').value='';$('f-title').value='';$('f-memo').value='';picked={};buildPick();toast('저장했어요');
+    }).catch(function(){err.textContent='저장하지 못했어요. 브라우저 저장이 막혀 있는지 확인해 주세요.'});
+  };
+
+  /* ---------- filters ---------- */
+  var cs=$('f-cat'),cf=$('cat-filter');
+  var all=document.createElement('option');all.value='';all.textContent='모든 종류';cf.appendChild(all);
+  CATS.forEach(function(c){var a=document.createElement('option');a.value=c;a.textContent=c;cs.appendChild(a);var b=document.createElement('option');b.value=c;b.textContent=c;cf.appendChild(b)});
+  $('q').oninput=renderList;cf.onchange=renderList;$('unseen').onchange=renderList;
+
+  render();
+  goLocal();
+})();
+</script>
