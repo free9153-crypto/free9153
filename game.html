@@ -1,480 +1,754 @@
+
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>PLAVE 턴제 멀티 릴레이 그림판</title>
-    <!-- Firebase SDK -->
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
-    <style>
-        :root {
-            --yejun: #3B82F6; --noah: #A855F7; --bambi: #EC4899;
-            --eunho: #EF4444; --hamin: #10B981;
-        }
-        * { box-sizing: border-box; touch-action: manipulation; }
-        body {
-            font-family: 'Malgun Gothic', sans-serif;
-            background: linear-gradient(135deg, #E0F2FE 0%, #F3E8FF 50%, #FCE7F3 100%);
-            margin: 0; padding: 10px;
-            display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
-            min-height: 100vh;
-        }
-        .card {
-            background: rgba(255, 255, 255, 0.98);
-            border-radius: 20px; padding: 15px;
-            width: 100%; max-width: 460px;
-            box-shadow: 0 10px 25px rgba(168, 85, 247, 0.15);
-            border: 3px solid #FFF;
-            margin-bottom: 20px;
-        }
-        h1 { font-size: 18px; color: #4C1D95; margin: 0 0 5px 0; text-align: center; }
-        .sub { font-size: 12px; color: #6B21A8; text-align: center; margin-bottom: 10px; font-weight: bold; }
-        
-        .setup-group { margin-bottom: 10px; text-align: left; }
-        label { font-size: 11px; font-weight: bold; color: #374151; display: block; margin-bottom: 3px; }
-        input { width: 100%; padding: 8px; border-radius: 10px; border: 2px solid #DDD6FE; font-size: 14px; outline: none; background: white; }
-        .btn-main { background: linear-gradient(90deg, #8B5CF6, #EC4899); color: white; border: none; width: 100%; padding: 12px; border-radius: 12px; font-size: 15px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 12px rgba(236, 72, 153, 0.3); margin-top: 5px; }
-        .btn-start { background: linear-gradient(90deg, #10B981, #3B82F6); color: white; border: none; width: 100%; padding: 14px; border-radius: 12px; font-size: 16px; font-weight: bold; cursor: pointer; margin-bottom: 8px; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3); }
-        .btn-gallery { background: #8B5CF6; color: white; border: none; width: 100%; padding: 10px; border-radius: 10px; font-size: 13px; font-weight: bold; cursor: pointer; margin-top: 6px; }
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>PLAVE 실시간 릴레이 그림판</title>
 
-        #gameScreen, #resultScreen { display: none; }
-        .header-status { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
-        .topic-badge { background: #F3E8FF; color: #6B21A8; padding: 5px 10px; border-radius: 15px; font-size: 12px; font-weight: bold; }
-        .timer-box { font-size: 18px; font-weight: 900; color: #6B21A8; }
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
 
-        .canvas-container { position: relative; width: 100%; background: white; border-radius: 14px; border: 3px solid #DDD6FE; overflow: hidden; }
-        canvas { display: block; width: 100%; height: 220px; background: white; cursor: crosshair; }
-        .turn-lock-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.2); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 16px; text-shadow: 0 2px 4px rgba(0,0,0,0.5); pointer-events: none; }
-
-        .controls-row { display: flex; justify-content: space-between; align-items: center; margin: 8px 0; flex-wrap: wrap; gap: 5px; }
-        .palette { display: flex; gap: 5px; align-items: center; }
-        .color-dot { width: 24px; height: 24px; border-radius: 50%; border: 2px solid white; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
-        .color-dot.active { transform: scale(1.2); border-color: #4C1D95; }
-        
-        .tool-btns { display: flex; gap: 5px; }
-        .btn-tool { background: #F3F4F6; border: 1px solid #D1D5DB; padding: 5px 8px; border-radius: 6px; font-size: 11px; font-weight: bold; cursor: pointer; color: #374151; }
-        .btn-tool.eraser-active { background: #FEF3C7; border-color: #F59E0B; color: #B45309; }
-
-        .chat-box, .guestbook-box { background: #F9FAFB; border-radius: 10px; border: 1px solid #E5E7EB; height: 80px; overflow-y: auto; padding: 6px; margin-top: 6px; font-size: 11px; text-align: left; }
-        .chat-msg { margin-bottom: 3px; }
-        .chat-msg span { font-weight: bold; color: #6B21A8; }
-        .chat-input-group { display: flex; gap: 5px; margin-top: 5px; }
-        .chat-input-group input { flex: 1; padding: 7px; font-size: 11px; }
-        .chat-input-group button { background: #8B5CF6; color: white; border: none; padding: 7px 10px; border-radius: 6px; font-weight: bold; font-size: 11px; }
-
-        /* 🖼️ 갤러리 모달 팝업 스타일 */
-        .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 999; justify-content: center; align-items: center; padding: 15px; }
-        .modal-content { background: white; border-radius: 20px; padding: 15px; width: 100%; max-width: 440px; max-height: 85vh; overflow-y: auto; box-shadow: 0 10px 25px rgba(0,0,0,0.2); }
-        .gallery-grid { display: grid; grid-template-columns: 1fr; gap: 15px; margin-top: 10px; }
-        .gallery-item { border: 2px solid #DDD6FE; border-radius: 12px; padding: 8px; background: #FAF5FF; }
-        .gallery-item img { width: 100%; border-radius: 8px; border: 1px solid #E9D5FF; }
-        .gallery-item-title { font-size: 12px; font-weight: bold; color: #6B21A8; margin-top: 4px; text-align: center; }
-    </style>
+<style>
+:root {
+ --yejun:#3B82F6;--noah:#A855F7;--bambi:#EC4899;
+ --eunho:#EF4444;--hamin:#10B981;
+}
+*{box-sizing:border-box}
+body{
+ font-family:'Malgun Gothic',sans-serif;
+ background:linear-gradient(135deg,#E0F2FE,#F3E8FF,#FCE7F3);
+ margin:0;padding:12px;display:flex;flex-direction:column;
+ align-items:center;min-height:100vh;
+}
+.card{
+ background:white;border-radius:20px;padding:16px;
+ width:100%;max-width:460px;margin-bottom:18px;
+ box-shadow:0 8px 25px #A855F722;border:3px solid white;
+}
+h1{font-size:19px;color:#4C1D95;text-align:center;margin:4px 0 8px}
+.sub{text-align:center;color:#7E22CE;font-size:12px;margin-bottom:14px;font-weight:bold}
+label{font-size:12px;font-weight:bold;display:block;margin-bottom:5px;color:#374151}
+input{
+ width:100%;padding:11px;border-radius:10px;
+ border:2px solid #DDD6FE;font-size:14px;background:white;
+}
+.setup-group{margin-bottom:12px}
+button{cursor:pointer}
+.btn{
+ width:100%;border:0;border-radius:12px;padding:12px;
+ font-size:14px;font-weight:bold;color:white;margin-top:6px;
+}
+.main{background:linear-gradient(90deg,#8B5CF6,#EC4899)}
+.start{background:linear-gradient(90deg,#10B981,#3B82F6)}
+.gallery{background:#8B5CF6}
+.gray{background:#6B7280}
+#gameScreen,#resultScreen{display:none}
+.status{
+ display:flex;justify-content:space-between;align-items:center;
+ gap:8px;margin:10px 0;
+}
+.topic{
+ background:#F3E8FF;color:#6B21A8;border-radius:20px;
+ padding:7px 10px;font-size:12px;font-weight:bold;
+}
+.timer{font-size:19px;font-weight:900;color:#6B21A8}
+#turnDisplay{
+ text-align:center;font-weight:bold;font-size:13px;
+ margin:10px 0;color:#4C1D95;
+}
+#playersDisplay{
+ background:#F5F3FF;padding:9px;border-radius:10px;
+ font-size:12px;margin:8px 0;color:#5B21B6;
+}
+.canvas-container{
+ position:relative;width:100%;background:white;
+ border:3px solid #DDD6FE;border-radius:14px;overflow:hidden;
+}
+canvas{
+ display:block;width:100%;height:auto;aspect-ratio:400/220;
+ background:white;touch-action:none;
+}
+#lockOverlay{
+ display:none;position:absolute;inset:0;
+ background:#0004;align-items:center;justify-content:center;
+ color:white;font-weight:bold;font-size:15px;
+ text-shadow:0 2px 4px #000;
+}
+.controls{
+ display:flex;justify-content:space-between;
+ align-items:center;flex-wrap:wrap;gap:8px;margin:10px 0;
+}
+.palette{display:flex;gap:7px;align-items:center}
+.dot{
+ width:25px;height:25px;border-radius:50%;
+ border:2px solid white;box-shadow:0 1px 4px #999;
+}
+.dot.active{outline:2px solid #4C1D95;transform:scale(1.12)}
+.tools{display:flex;gap:5px}
+.tool{
+ border:1px solid #D1D5DB;background:#F3F4F6;
+ border-radius:7px;padding:7px;font-size:11px;font-weight:bold;
+}
+.tool.active{background:#FEF3C7;color:#B45309}
+.chat-box{
+ background:#F9FAFB;border:1px solid #E5E7EB;
+ border-radius:10px;height:100px;overflow-y:auto;
+ padding:8px;margin-top:8px;font-size:12px;
+}
+.chat-msg{margin-bottom:5px;overflow-wrap:anywhere}
+.chat-msg strong{color:#7E22CE}
+.chat-input{display:flex;gap:5px;margin-top:6px}
+.chat-input input{flex:1;min-width:0;padding:9px;font-size:12px}
+.chat-input button{
+ background:#8B5CF6;color:white;border:0;
+ padding:8px 12px;border-radius:8px;font-weight:bold;
+}
+.modal{
+ display:none;position:fixed;inset:0;background:#0009;
+ z-index:99;align-items:center;justify-content:center;padding:12px;
+}
+.modal-content{
+ background:white;border-radius:18px;padding:15px;
+ width:100%;max-width:440px;max-height:85vh;overflow-y:auto;
+}
+.gallery-grid{display:grid;gap:12px;margin-top:12px}
+.gallery-item{
+ background:#FAF5FF;border:2px solid #DDD6FE;
+ padding:8px;border-radius:12px;
+}
+.gallery-item img{width:100%;border-radius:8px}
+.gallery-title{text-align:center;font-size:12px;font-weight:bold;color:#6B21A8;padding:5px}
+#resultImage{width:100%;border:3px solid #DDD6FE;border-radius:14px}
+#connectionStatus{font-size:11px;text-align:center;margin-bottom:8px;color:#059669}
+</style>
 </head>
+
 <body>
 
-    <!-- 1. 첫 화면 (메인 로비) -->
-    <div class="card" id="setupScreen">
-        <h1>✨ PLAVE 턴제 멀티 릴레이 그림판</h1>
-        <div class="sub">💬 접속 전 전체 로비 대화창 💬</div>
+<div class="card" id="setupScreen">
+ <h1>✨ PLAVE 실시간 릴레이 그림판</h1>
+ <div class="sub">💜 친구들과 함께 그리는 그림 게임 💜</div>
+ <div id="connectionStatus">Firebase 연결 확인 중...</div>
 
-        <div class="setup-group">
-            <label>💬 실시간 전체 로비 채팅</label>
-            <div class="chat-box" id="globalChatBox" style="height: 90px;"></div>
-            <div class="chat-input-group">
-                <input type="text" id="globalChatInput" placeholder="접속자들과 자유롭게 대화해보세요!" onkeypress="if(event.key==='Enter') sendGlobalChat()">
-                <button onclick="sendGlobalChat()">전송</button>
-            </div>
-        </div>
-        
-        <div class="setup-group" style="margin-top:6px;">
-            <label>닉네임</label>
-            <input type="text" id="nickname" placeholder="닉네임을 입력하세요 (예: 밤비팬)">
-        </div>
+ <div class="setup-group">
+  <label>💬 전체 로비 채팅</label>
+  <div class="chat-box" id="globalChatBox"></div>
+  <div class="chat-input">
+   <input id="globalChatInput" placeholder="전체 채팅 메시지">
+   <button onclick="sendGlobalChat()">전송</button>
+  </div>
+ </div>
 
-        <div class="setup-group">
-            <label>방 코드 (친구와 같은 코드로 접속!)</label>
-            <input type="text" id="roomCode" value="PLAVE123">
-        </div>
+ <div class="setup-group">
+  <label>닉네임</label>
+  <input id="nickname" maxlength="15" placeholder="닉네임 입력">
+ </div>
 
-        <button class="btn-main" onclick="joinRoom()">방 입장하기 🚀</button>
-        <!-- 🔥 메인 로비에 갤러리 버튼 추가! -->
-        <button class="btn-gallery" style="background:#6B21A8; margin-top:8px;" onclick="openGallery()">🖼️ 역대 작품 갤러리 구경하기</button>
-    </div>
+ <div class="setup-group">
+  <label>방 코드</label>
+  <input id="roomCode" maxlength="30" value="PLAVE123">
+ </div>
 
-    <!-- 2. 게임 화면 -->
-    <div class="card" id="gameScreen">
-        <button class="btn-start" id="startBtn" onclick="startGame()">🎨 그림판 시작하기!</button>
+ <button class="btn main" onclick="joinRoom()">🚀 방 입장하기</button>
+ <button class="btn gallery" onclick="openGallery()">🖼️ 역대 작품 갤러리</button>
+</div>
 
-        <div class="header-status">
-            <span class="topic-badge" id="topicDisplay">주제: 대기 중</span>
-            <div class="timer-box" id="timer">⏱️ 15</div>
-        </div>
-        <div style="font-size:12px; font-weight:bold; color:#1F2937; margin-bottom:5px; text-align:center;" id="turnDisplay">시작 버튼을 눌러주세요</div>
+<div class="card" id="gameScreen">
+ <h1>🎨 PLAVE 릴레이 그림판</h1>
+ <div id="playersDisplay">접속자 확인 중...</div>
 
-        <div class="canvas-container">
-            <canvas id="paintCanvas" width="400" height="220"></canvas>
-            <div class="turn-lock-overlay" id="lockOverlay" style="display:none;">🔒 다른 사람 차례입니다</div>
-        </div>
+ <button class="btn start" id="startBtn" onclick="startGame()">🎨 게임 시작하기!</button>
 
-        <div class="controls-row">
-            <div class="palette">
-                <div class="color-dot active" style="background:#000000;" onclick="setColor('#000000', this)" title="검정"></div>
-                <div class="color-dot" style="background:var(--yejun);" onclick="setColor('#3B82F6', this)" title="예준 파랑"></div>
-                <div class="color-dot" style="background:var(--noah);" onclick="setColor('#A855F7', this)" title="노아 보라"></div>
-                <div class="color-dot" style="background:var(--bambi);" onclick="setColor('#EC4899', this)" title="밤비 분홍"></div>
-                <div class="color-dot" style="background:var(--eunho);" onclick="setColor('#EF4444', this)" title="은호 빨강"></div>
-                <div class="color-dot" style="background:var(--hamin);" onclick="setColor('#10B981', this)" title="하민 초록"></div>
-            </div>
-            <div class="tool-btns">
-                <button class="btn-tool" id="eraserBtn" onclick="toggleEraser()">🧹 지우개</button>
-                <button class="btn-tool" onclick="clearCanvas()">🗑️ 전체 삭제</button>
-            </div>
-        </div>
+ <div class="status">
+  <span class="topic" id="topicDisplay">주제: 대기 중</span>
+  <span class="timer" id="timer">⏱️ --</span>
+ </div>
 
-        <button class="btn-gallery" onclick="openGallery()">🖼️ 우리 방 역대 작품 보러가기</button>
+ <div id="turnDisplay">게임 시작을 기다리는 중</div>
 
-        <!-- Realtime Chat -->
-        <div class="chat-box" id="chatBox"></div>
-        <div class="chat-input-group">
-            <input type="text" id="chatInput" placeholder="메시지를 입력하세요..." onkeypress="if(event.key==='Enter') sendChat()">
-            <button onclick="sendChat()">전송</button>
-        </div>
-    </div>
+ <div class="canvas-container">
+  <canvas id="paintCanvas" width="400" height="220"></canvas>
+  <div id="lockOverlay">🔒 다른 사람 차례입니다</div>
+ </div>
 
-    <!-- 3. 결과 및 방명록 화면 -->
-    <div class="card" id="resultScreen">
-        <h1>🎉 작품 완성!</h1>
-        <div class="sub" id="resultTopic"></div>
-        <div style="text-align:center; margin: 8px 0;">
-            <img id="resultImage" style="width:100%; border-radius:14px; border:3px solid #DDD6FE;">
-        </div>
+ <div class="controls">
+  <div class="palette">
+   <button class="dot active" style="background:#000" onclick="setColor('#000000',this)"></button>
+   <button class="dot" style="background:var(--yejun)" onclick="setColor('#3B82F6',this)"></button>
+   <button class="dot" style="background:var(--noah)" onclick="setColor('#A855F7',this)"></button>
+   <button class="dot" style="background:var(--bambi)" onclick="setColor('#EC4899',this)"></button>
+   <button class="dot" style="background:var(--eunho)" onclick="setColor('#EF4444',this)"></button>
+   <button class="dot" style="background:var(--hamin)" onclick="setColor('#10B981',this)"></button>
+  </div>
+  <div class="tools">
+   <button class="tool" id="eraserBtn" onclick="toggleEraser()">🧹 지우개</button>
+   <button class="tool" onclick="clearCanvas()">🗑️ 삭제</button>
+  </div>
+ </div>
 
-        <!-- 📖 방명록 영역 -->
-        <div style="font-size:13px; font-weight:bold; color:#4C1D95; text-align:left; margin-top:8px;">📖 작품 방명록</div>
-        <div class="guestbook-box" id="guestbookBox"></div>
-        <div class="chat-input-group">
-            <input type="text" id="gbInput" placeholder="감상평을 남겨주세요!" onkeypress="if(event.key==='Enter') sendGuestbook()">
-            <button onclick="sendGuestbook()">남기기</button>
-        </div>
+ <button class="btn gallery" onclick="openGallery()">🖼️ 작품 갤러리</button>
 
-        <button class="btn-gallery" onclick="openGallery()">🖼️ 역대 작품 갤러리 열기</button>
-        <button class="btn-main" style="margin-top:6px;" onclick="downloadImage()">💾 이미지 저장하기</button>
-        <button class="btn-start" style="margin-top:6px; padding:10px;" onclick="nextTopicGame()">🔄 다음 판 시작하기</button>
-    </div>
+ <label style="margin-top:12px">💬 방 채팅</label>
+ <div class="chat-box" id="chatBox"></div>
+ <div class="chat-input">
+  <input id="chatInput" maxlength="300" placeholder="메시지 입력">
+  <button onclick="sendChat()">전송</button>
+ </div>
+ <button class="btn gray" onclick="leaveRoom()">방 나가기</button>
+</div>
 
-    <!-- 4. 🖼️ 역대 작품 갤러리 팝업 모달 -->
-    <div class="modal-overlay" id="galleryModal">
-        <div class="modal-content">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                <h2 style="font-size:16px; color:#4C1D95; margin:0;">🖼️ 역대 작품 게시판</h2>
-                <button onclick="closeGallery()" style="background:#E5E7EB; border:none; padding:5px 10px; border-radius:8px; font-weight:bold; cursor:pointer;">✕ 닫기</button>
-            </div>
-            <div class="gallery-grid" id="galleryGrid">
-                <div style="text-align:center; color:#6B21A8; font-size:13px; padding:20px;">아직 저장된 작품이 없습니다! 첫 판을 완성해보세요 ✨</div>
-            </div>
-        </div>
-    </div>
+<div class="card" id="resultScreen">
+ <h1>🎉 작품 완성!</h1>
+ <div class="sub" id="resultTopic"></div>
+ <img id="resultImage" alt="완성된 그림">
 
-    <script>
-        const firebaseConfig = { databaseURL: "https://plave-relay-default-rtdb.asia-southeast1.firebasedatabase.app" };
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.database();
+ <label style="margin-top:12px">📖 작품 방명록</label>
+ <div class="chat-box" id="guestbookBox"></div>
+ <div class="chat-input">
+  <input id="gbInput" maxlength="300" placeholder="감상평 남기기">
+  <button onclick="sendGuestbook()">남기기</button>
+ </div>
 
-        const topics = ["예준이의 하트", "노아의 쌩얼 아이돌 모드", "밤비의 핑크 덤벨", "은호의 레드 랩 폭발", "하민이의 은하수 댄스", "칼리고 디제잉", "아스테룸 유성우"];
-        let myName = "", myId = "", roomRef = null, globalChatRef = null, timerInterval = null, timeLeft = 15;
-        let color = "#000000", isEraser = false, isDrawing = false, isMyTurn = true;
-        let playerList = [];
+ <button class="btn gallery" onclick="openGallery()">🖼️ 갤러리</button>
+ <button class="btn main" onclick="downloadImage()">💾 그림 저장</button>
+ <button class="btn start" onclick="startGame()">🔄 다음 판 시작하기</button>
+ <button class="btn gray" onclick="leaveRoom()">방 나가기</button>
+</div>
 
-        window.onload = function() {
-            globalChatRef = db.ref('global_lobby_chat');
-            globalChatRef.limitToLast(30).on('child_added', (snapshot) => {
-                const data = snapshot.val();
-                if (data && data.name && data.msg) {
-                    const box = document.getElementById('globalChatBox');
-                    box.innerHTML += `<div class="chat-msg"><span>${data.name}:</span> ${data.msg}</div>`;
-                    box.scrollTop = box.scrollHeight;
-                }
-            });
-        };
+<div class="modal" id="galleryModal">
+ <div class="modal-content">
+  <div style="display:flex;justify-content:space-between;align-items:center">
+   <b style="color:#6B21A8">🖼️ 역대 작품 게시판</b>
+   <button onclick="closeGallery()">✕ 닫기</button>
+  </div>
+  <div class="gallery-grid" id="galleryGrid"></div>
+ </div>
+</div>
 
-        function sendGlobalChat() {
-            const input = document.getElementById('globalChatInput');
-            const nameInput = document.getElementById('nickname').value.trim() || "방문객";
-            if (!input.value.trim()) return;
-            
-            globalChatRef.push({ name: nameInput, msg: input.value.trim() });
-            input.value = "";
-        }
+<script>
+/* Firebase 설정 */
+const firebaseConfig = {
+ databaseURL:"https://plave-relay-default-rtdb.asia-southeast1.firebasedatabase.app"
+};
 
-        function joinRoom() {
-            myName = document.getElementById('nickname').value.trim() || "익명 힐러";
-            myId = "user_" + Math.random().toString(36).substr(2, 9);
-            const code = document.getElementById('roomCode').value.trim() || "PLAVE123";
+firebase.initializeApp(firebaseConfig);
+const db=firebase.database();
 
-            roomRef = db.ref('rooms/' + code);
-            
-            document.getElementById('setupScreen').style.display = 'none';
-            document.getElementById('gameScreen').style.display = 'block';
+const topics=[
+ "예준이의 하트","노아의 쌩얼 아이돌 모드",
+ "밤비의 핑크 덤벨","은호의 레드 랩 폭발",
+ "하민이의 은하수 댄스","칼리고 디제잉","아스테룸 유성우"
+];
 
-            // 플레이어 등록
-            roomRef.child('players/' + myId).set({ name: myName });
-            roomRef.child('players/' + myId).onDisconnect().remove();
+let myName="";
+let myId="";
+let roomRef=null;
+let playerList=[];
+let gameState=null;
+let isMyTurn=false;
+let isDrawing=false;
+let isEraser=false;
+let color="#000000";
+let timerInterval=null;
+let lastSync=0;
+let advancing=false;
+let joined=false;
+let lastRoundId="";
+let savedRoundId="";
 
-            roomRef.child('players').on('value', (snapshot) => {
-                const val = snapshot.val();
-                playerList = val ? Object.keys(val).map(k => ({ id: k, name: val[k].name })) : [];
-            });
+const canvas=document.getElementById("paintCanvas");
+const ctx=canvas.getContext("2d");
 
-            // 방별 실시간 채팅
-            roomRef.child('chat').on('child_added', (snapshot) => {
-                const data = snapshot.val();
-                if (data && data.name && data.msg) {
-                    const box = document.getElementById('chatBox');
-                    box.innerHTML += `<div class="chat-msg"><span>${data.name}:</span> ${data.msg}</div>`;
-                    box.scrollTop = box.scrollHeight;
-                }
-            });
+function whiteCanvas(){
+ ctx.fillStyle="#FFFFFF";
+ ctx.fillRect(0,0,canvas.width,canvas.height);
+}
 
-            // 방명록
-            roomRef.child('guestbook').on('child_added', (snapshot) => {
-                const data = snapshot.val();
-                if (data && data.name && data.msg) {
-                    const box = document.getElementById('guestbookBox');
-                    box.innerHTML += `<div class="chat-msg"><span>${data.name}:</span> ${data.msg}</div>`;
-                    box.scrollTop = box.scrollHeight;
-                }
-            });
+function showMessage(message){
+ alert(message);
+}
 
-            // 캔버스 동기화
-            roomRef.child('draw').on('value', (snapshot) => {
-                const dataUrl = snapshot.val();
-                if (dataUrl) {
-                    const img = new Image();
-                    img.onload = () => ctx.drawImage(img, 0, 0);
-                    img.src = dataUrl;
-                }
-            });
+function appendMessage(boxId,name,msg){
+ const box=document.getElementById(boxId);
+ const line=document.createElement("div");
+ line.className="chat-msg";
+ const strong=document.createElement("strong");
+ strong.textContent=name+": ";
+ const span=document.createElement("span");
+ span.textContent=msg;
+ line.append(strong,span);
+ box.appendChild(line);
+ while(box.children.length>60) box.removeChild(box.firstChild);
+ box.scrollTop=box.scrollHeight;
+}
 
-            initCanvas();
-            sendSystemChat(`${myName} 님이 입장하셨습니다!`);
-        }
+/* 연결 상태 */
+db.ref(".info/connected").on("value",snap=>{
+ const status=document.getElementById("connectionStatus");
+ status.textContent=snap.val() ? "🟢 Firebase 연결됨" : "🟠 서버 연결 중...";
+});
 
-        function startGame() {
-            document.getElementById('startBtn').style.display = 'none';
-            const randomTopic = topics[Math.floor(Math.random() * topics.length)];
-            document.getElementById('topicDisplay').innerText = `주제: ${randomTopic}`;
-            
-            initCanvas();
+/* 전체 로비 채팅 */
+const globalChatRef=db.ref("global_lobby_chat");
+globalChatRef.limitToLast(30).on("child_added",snap=>{
+ const d=snap.val();
+ if(d) appendMessage("globalChatBox",d.name||"방문객",d.msg||"");
+});
 
-            if (playerList.length <= 1) {
-                isMyTurn = true;
-                timeLeft = 20;
-                document.getElementById('timer').innerText = `⏱️ ${timeLeft}`;
-                document.getElementById('turnDisplay').innerText = `🎨 혼자 그리기 연습 모드 (20초)`;
-                startSoloTimer();
-            } else {
-                startTurnProcess(0);
-            }
-        }
+function sendGlobalChat(){
+ const input=document.getElementById("globalChatInput");
+ const msg=input.value.trim();
+ if(!msg)return;
+ globalChatRef.push({
+  name:document.getElementById("nickname").value.trim()||"방문객",
+  msg:msg,
+  time:Date.now()
+ }).catch(e=>showMessage("채팅 전송 실패: "+e.message));
+ input.value="";
+}
 
-        function startSoloTimer() {
-            if (timerInterval) clearInterval(timerInterval);
-            timerInterval = setInterval(() => {
-                timeLeft--;
-                document.getElementById('timer').innerText = `⏱️ ${timeLeft}`;
-                if (timeLeft <= 0) {
-                    clearInterval(timerInterval);
-                    endGame();
-                }
-            }, 1000);
-        }
+/* 방 입장 */
+async function joinRoom(){
+ if(joined)return;
 
-        function startTurnProcess(turnIdx) {
-            if (turnIdx >= playerList.length || playerList.length === 0) {
-                endGame();
-                return;
-            }
+ myName=document.getElementById("nickname").value.trim()||"익명 힐러";
+ const code=document.getElementById("roomCode").value.trim().replace(/[.#$/[\]]/g,"");
 
-            const currentPlayer = playerList[turnIdx];
-            isMyTurn = (currentPlayer.id === myId);
+ if(!code){showMessage("방 코드를 입력해 주세요.");return;}
 
-            const lockOverlay = document.getElementById('lockOverlay');
-            if (isMyTurn) {
-                lockOverlay.style.display = 'none';
-                document.getElementById('turnDisplay').innerText = `🎨 내 차례입니다! (10초)`;
-            } else {
-                lockOverlay.style.display = 'flex';
-                lockOverlay.innerText = `🔒 ${currentPlayer.name} 님의 차례입니다`;
-                document.getElementById('turnDisplay').innerText = `${currentPlayer.name} 님이 그리는 중...`;
-            }
+ myId="user_"+Math.random().toString(36).slice(2,12);
+ roomRef=db.ref("rooms/"+code);
 
-            timeLeft = 10;
-            if (timerInterval) clearInterval(timerInterval);
-            timerInterval = setInterval(() => {
-                timeLeft--;
-                document.getElementById('timer').innerText = `⏱️ ${timeLeft}`;
-                if (timeLeft <= 0) {
-                    clearInterval(timerInterval);
-                    startTurnProcess(turnIdx + 1);
-                }
-            }, 1000);
-        }
+ try{
+  const playersRef=roomRef.child("players");
 
-        function nextTopicGame() {
-            document.getElementById('resultScreen').style.display = 'none';
-            document.getElementById('gameScreen').style.display = 'block';
-            document.getElementById('startBtn').style.display = 'block';
-            document.getElementById('startBtn').innerText = "🎨 다음 판 시작하기";
-            document.getElementById('lockOverlay').style.display = 'none';
-            document.getElementById('turnDisplay').innerText = "시작 버튼을 누르면 시작됩니다";
-            document.getElementById('timer').innerText = `⏱️ 15`;
-            initCanvas();
-        }
+  const result=await playersRef.transaction(current=>{
+   current=current||{};
+   if(current[myId])return current;
+   if(Object.keys(current).length>=5)return;
+   current[myId]={name:myName,joinedAt:Date.now()};
+   return current;
+  });
 
-        function endGame() {
-            document.getElementById('gameScreen').style.display = 'none';
-            document.getElementById('resultScreen').style.display = 'block';
-            const topicText = document.getElementById('topicDisplay').innerText;
-            document.getElementById('resultTopic').innerText = topicText;
-            const imgData = canvas.toDataURL();
-            document.getElementById('resultImage').src = imgData;
+  if(!result.committed){
+   showMessage("방에 5명이 이미 접속해 있어요!");
+   return;
+  }
 
-            if (roomRef) {
-                const now = new Date();
-                const timeStr = `${now.getHours()}:${String(now.getMinutes()).padStart(2, '0')}`;
-                roomRef.child('gallery').push({
-                    topic: topicText,
-                    image: imgData,
-                    date: timeStr
-                });
-            }
-        }
+  joined=true;
 
-        function openGallery() {
-            const code = document.getElementById('roomCode').value.trim() || "PLAVE123";
-            const targetRef = roomRef ? roomRef.child('gallery') : db.ref('rooms/' + code + '/gallery');
-            
-            targetRef.once('value', (snapshot) => {
-                const galleryGrid = document.getElementById('galleryGrid');
-                const val = snapshot.val();
-                if (val) {
-                    galleryGrid.innerHTML = "";
-                    const items = Object.values(val).reverse();
-                    items.forEach(item => {
-                        galleryGrid.innerHTML += `
-                            <div class="gallery-item">
-                                <img src="${item.image}">
-                                <div class="gallery-item-title">${item.topic} (${item.date})</div>
-                            </div>
-                        `;
-                    });
-                } else {
-                    galleryGrid.innerHTML = '<div style="text-align:center; color:#6B21A8; font-size:13px; padding:20px;">아직 저장된 작품이 없습니다! 첫 판을 완성해보세요 ✨</div>';
-                }
-            });
+  await roomRef.child("players/"+myId).onDisconnect().remove();
 
-            document.getElementById('galleryModal').style.display = 'flex';
-        }
+  document.getElementById("setupScreen").style.display="none";
+  document.getElementById("gameScreen").style.display="block";
 
-        function closeGallery() {
-            document.getElementById('galleryModal').style.display = 'none';
-        }
+  playersRef.on("value",snap=>{
+   const val=snap.val()||{};
+   playerList=Object.keys(val).map(id=>({
+    id:id,name:val[id].name||"익명"
+   }));
+   document.getElementById("playersDisplay").textContent=
+    "👥 접속자 ("+playerList.length+"/5): "+
+    playerList.map(p=>p.name).join(" · ");
+  });
 
-        const canvas = document.getElementById('paintCanvas');
-        const ctx = canvas.getContext('2d');
+  roomRef.child("chat").limitToLast(50).on("child_added",snap=>{
+   const d=snap.val();
+   if(d)appendMessage("chatBox",d.name||"익명",d.msg||"");
+  });
 
-        function initCanvas() {
-            ctx.fillStyle = "#FFFFFF";
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-            if(roomRef) roomRef.child('draw').set(canvas.toDataURL());
-        }
+  roomRef.child("guestbook").limitToLast(50).on("child_added",snap=>{
+   const d=snap.val();
+   if(d)appendMessage("guestbookBox",d.name||"익명",d.msg||"");
+  });
 
-        function sendChat() {
-            const input = document.getElementById('chatInput');
-            if (!input.value.trim()) return;
-            if (roomRef) roomRef.child('chat').push({ name: myName, msg: input.value.trim() });
-            input.value = "";
-        }
+  roomRef.child("draw").on("value",snap=>{
+   const data=snap.val();
+   if(!data)return;
+   const img=new Image();
+   img.onload=()=>ctx.drawImage(img,0,0,canvas.width,canvas.height);
+   img.src=data;
+  });
 
-        function sendGuestbook() {
-            const input = document.getElementById('gbInput');
-            if (!input.value.trim()) return;
-            if (roomRef) roomRef.child('guestbook').push({ name: myName, msg: input.value.trim() });
-            input.value = "";
-        }
+  roomRef.child("game").on("value",snap=>{
+   gameState=snap.val();
+   renderGame();
+  });
 
-        function sendSystemChat(msg) {
-            if (roomRef) roomRef.child('chat').push({ name: "📢 시스템", msg: msg });
-        }
+  roomRef.child("chat").push({
+   name:"📢 시스템",msg:myName+" 님이 입장했습니다!"
+  });
 
-        function getPos(e) {
-            const rect = canvas.getBoundingClientRect();
-            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-            return { x: (clientX - rect.left) * (canvas.width / rect.width), y: (clientY - rect.top) * (canvas.height / rect.height) };
-        }
+ }catch(error){
+  joined=false;
+  showMessage("입장 실패: "+error.message+
+   "\nFirebase 데이터베이스 규칙을 확인해 주세요.");
+ }
+}
 
-        function startDrawing(e) { if(!isMyTurn) return; isDrawing = true; draw(e); }
-        function stopDrawing() { 
-            if(isDrawing) { 
-                isDrawing = false; 
-                ctx.beginPath(); 
-                if(roomRef) roomRef.child('draw').set(canvas.toDataURL());
-            } 
-        }
-        function draw(e) {
-            if (!isDrawing || !isMyTurn) return;
-            const pos = getPos(e);
-            ctx.lineWidth = isEraser ? 16 : 4;
-            ctx.lineCap = 'round';
-            ctx.strokeStyle = isEraser ? "#FFFFFF" : color;
-            ctx.lineTo(pos.x, pos.y);
-            ctx.stroke();
-            ctx.beginPath();
-            ctx.moveTo(pos.x, pos.y);
-        }
+/* 게임 시작: 방 전체의 공용 상태를 기록 */
+async function startGame(){
+ if(!roomRef||!joined)return;
 
-        canvas.addEventListener('mousedown', startDrawing);
-        canvas.addEventListener('mousemove', draw);
-        canvas.addEventListener('mouseup', stopDrawing);
-        canvas.addEventListener('touchstart', (e) => { startDrawing(e); e.preventDefault(); });
-        canvas.addEventListener('touchmove', (e) => { draw(e); e.preventDefault(); });
-        canvas.addEventListener('touchend', stopDrawing);
+ try{
+  const playersSnap=await roomRef.child("players").once("value");
+  const players=playersSnap.val()||{};
+  const ids=Object.keys(players);
 
-        function setColor(c, el) {
-            isEraser = false;
-            document.getElementById('eraserBtn').classList.remove('eraser-active');
-            color = c;
-            document.querySelectorAll('.color-dot').forEach(d => d.classList.remove('active'));
-            if(el) el.classList.add('active');
-        }
+  if(!ids.length){showMessage("접속자가 없습니다.");return;}
 
-        function toggleEraser() {
-            isEraser = !isEraser;
-            const eraserBtn = document.getElementById('eraserBtn');
-            if (isEraser) {
-                eraserBtn.classList.add('eraser-active');
-                document.querySelectorAll('.color-dot').forEach(d => d.classList.remove('active'));
-            } else {
-                eraserBtn.classList.remove('eraser-active');
-            }
-        }
+  const topic=topics[Math.floor(Math.random()*topics.length)];
+  const roundId=Date.now()+"_"+myId;
 
-        function clearCanvas() {
-            if(!isMyTurn) return;
-            ctx.fillStyle = "#FFFFFF";
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-            if(roomRef) roomRef.child('draw').set(canvas.toDataURL());
-        }
+  const result=await roomRef.child("game").transaction(current=>{
+   if(current&&current.status==="playing")return;
+   return {
+    status:"playing",
+    topic:topic,
+    roundId:roundId,
+    hostId:myId,
+    turnOrder:ids,
+    currentIndex:0,
+    currentPlayerId:ids[0],
+    turnEndsAt:Date.now()+10000,
+    gallerySaved:false
+   };
+  });
 
-        function downloadImage() {
-            const a = document.createElement('a');
-            a.href = canvas.toDataURL();
-            a.download = 'PLAVE_Relay_Drawing.png';
-            a.click();
-        }
-    </script>
+  if(!result.committed){
+   showMessage("이미 게임이 진행 중이에요!");
+   return;
+  }
+
+  whiteCanvas();
+  await roomRef.child("draw").set(canvas.toDataURL("image/png"));
+
+ }catch(error){
+  showMessage("게임 시작 실패: "+error.message);
+ }
+}
+
+/* 모든 참가자가 동일한 서버 상태를 기준으로 화면 표시 */
+function renderGame(){
+ if(!gameState)return;
+
+ const state=gameState;
+
+ if(state.roundId&&state.roundId!==lastRoundId){
+  lastRoundId=state.roundId;
+  whiteCanvas();
+ }
+
+ if(state.status==="playing"){
+  document.getElementById("gameScreen").style.display="block";
+  document.getElementById("resultScreen").style.display="none";
+  document.getElementById("startBtn").style.display="none";
+
+  document.getElementById("topicDisplay").textContent="주제: "+state.topic;
+
+  const current=playerList.find(p=>p.id===state.currentPlayerId);
+  const currentName=current?current.name:"참가자";
+
+  isMyTurn=state.currentPlayerId===myId;
+
+  document.getElementById("lockOverlay").style.display=
+   isMyTurn?"none":"flex";
+
+  document.getElementById("lockOverlay").textContent=
+   "🔒 "+currentName+" 님의 차례입니다";
+
+  document.getElementById("turnDisplay").textContent=
+   isMyTurn?"🎨 내 차례입니다! 그림을 그려주세요":"✏️ "+currentName+" 님이 그림을 그리고 있어요";
+
+  startLocalTimer();
+
+ }else if(state.status==="finished"){
+  isMyTurn=false;
+  clearInterval(timerInterval);
+  document.getElementById("gameScreen").style.display="none";
+  document.getElementById("resultScreen").style.display="block";
+  document.getElementById("resultTopic").textContent=state.topic;
+  document.getElementById("timer").textContent="완료!";
+  document.getElementById("resultImage").src=canvas.toDataURL("image/png");
+  saveGalleryOnce(state);
+ }else{
+  isMyTurn=false;
+  clearInterval(timerInterval);
+  document.getElementById("gameScreen").style.display="block";
+  document.getElementById("resultScreen").style.display="none";
+  document.getElementById("startBtn").style.display="block";
+  document.getElementById("startBtn").textContent="🎨 게임 시작하기!";
+  document.getElementById("topicDisplay").textContent="주제: 대기 중";
+  document.getElementById("turnDisplay").textContent="누구나 시작 버튼을 누를 수 있어요!";
+  document.getElementById("timer").textContent="⏱️ --";
+  document.getElementById("lockOverlay").style.display="none";
+ }
+}
+
+/* 각 기기에서 공용 종료 시각을 읽어 표시 */
+function startLocalTimer(){
+ clearInterval(timerInterval);
+
+ const tick=()=>{
+  if(!gameState||gameState.status!=="playing")return;
+
+  const remaining=Math.max(0,Math.ceil((gameState.turnEndsAt-Date.now())/1000));
+  document.getElementById("timer").textContent="⏱️ "+remaining;
+
+  if(remaining<=0)advanceTurn();
+ };
+
+ tick();
+ timerInterval=setInterval(tick,250);
+}
+
+/* 트랜잭션으로 차례 변경: 여러 기기가 동시에 실행해도 한 번만 진행 */
+async function advanceTurn(){
+ if(advancing||!roomRef)return;
+ advancing=true;
+
+ try{
+  await roomRef.child("game").transaction(current=>{
+   if(!current||current.status!=="playing")return;
+   if(Date.now()<current.turnEndsAt)return;
+
+   const nextIndex=current.currentIndex+1;
+
+   if(nextIndex>=current.turnOrder.length){
+    current.status="finished";
+    current.finishedAt=Date.now();
+   }else{
+    current.currentIndex=nextIndex;
+    current.currentPlayerId=current.turnOrder[nextIndex];
+    current.turnEndsAt=Date.now()+10000;
+   }
+
+   return current;
+  });
+ }catch(error){
+  console.error("턴 변경 실패",error);
+ }finally{
+  advancing=false;
+ }
+}
+
+/* 갤러리 한 번만 저장 */
+async function saveGalleryOnce(state){
+ if(!roomRef||!state||!state.roundId||savedRoundId===state.roundId)return;
+
+ try{
+  const result=await roomRef.child("game").transaction(current=>{
+   if(!current||current.status!=="finished"||current.gallerySaved)return;
+   current.gallerySaved=true;
+   return current;
+  });
+
+  if(result.committed){
+   savedRoundId=state.roundId;
+   const image=canvas.toDataURL("image/png");
+   await roomRef.child("gallery").push({
+    topic:state.topic,
+    image:image,
+    date:new Date().toLocaleString("ko-KR"),
+    roundId:state.roundId
+   });
+  }
+ }catch(error){
+  console.error("갤러리 저장 실패",error);
+ }
+}
+
+/* 다음 판도 전체 참가자가 공유 */
+function nextTopicGame(){
+ startGame();
+}
+
+/* 채팅 */
+function sendChat(){
+ const input=document.getElementById("chatInput");
+ const msg=input.value.trim();
+ if(!msg||!roomRef)return;
+
+ roomRef.child("chat").push({
+  name:myName,msg:msg,time:Date.now()
+ }).catch(e=>showMessage("전송 실패: "+e.message));
+
+ input.value="";
+}
+
+function sendGuestbook(){
+ const input=document.getElementById("gbInput");
+ const msg=input.value.trim();
+ if(!msg||!roomRef)return;
+
+ roomRef.child("guestbook").push({
+  name:myName,msg:msg,time:Date.now()
+ }).catch(e=>showMessage("방명록 실패: "+e.message));
+
+ input.value="";
+}
+
+/* 그림 그리기 */
+function getPos(e){
+ const rect=canvas.getBoundingClientRect();
+ return {
+  x:(e.clientX-rect.left)*(canvas.width/rect.width),
+  y:(e.clientY-rect.top)*(canvas.height/rect.height)
+ };
+}
+
+function startDrawing(e){
+ if(!isMyTurn)return;
+ isDrawing=true;
+ const pos=getPos(e);
+ ctx.beginPath();
+ ctx.moveTo(pos.x,pos.y);
+ canvas.setPointerCapture?.(e.pointerId);
+}
+
+function draw(e){
+ if(!isDrawing||!isMyTurn)return;
+
+ const pos=getPos(e);
+ ctx.lineWidth=isEraser?18:4;
+ ctx.lineCap="round";
+ ctx.lineJoin="round";
+ ctx.strokeStyle=isEraser?"#FFFFFF":color;
+ ctx.lineTo(pos.x,pos.y);
+ ctx.stroke();
+
+ const now=Date.now();
+ if(now-lastSync>300){
+  lastSync=now;
+  syncDrawing();
+ }
+}
+
+function stopDrawing(){
+ if(!isDrawing)return;
+ isDrawing=false;
+ ctx.beginPath();
+ syncDrawing();
+}
+
+function syncDrawing(){
+ if(!roomRef||!isMyTurn)return;
+ roomRef.child("draw").set(canvas.toDataURL("image/png"))
+  .catch(e=>console.error("그림 전송 실패",e));
+}
+
+canvas.addEventListener("pointerdown",startDrawing);
+canvas.addEventListener("pointermove",draw);
+canvas.addEventListener("pointerup",stopDrawing);
+canvas.addEventListener("pointercancel",stopDrawing);
+canvas.addEventListener("pointerleave",stopDrawing);
+
+function setColor(c,el){
+ color=c;
+ isEraser=false;
+ document.getElementById("eraserBtn").classList.remove("active");
+ document.querySelectorAll(".dot").forEach(d=>d.classList.remove("active"));
+ el.classList.add("active");
+}
+
+function toggleEraser(){
+ isEraser=!isEraser;
+ document.getElementById("eraserBtn").classList.toggle("active",isEraser);
+}
+
+function clearCanvas(){
+ if(!isMyTurn)return;
+ whiteCanvas();
+ syncDrawing();
+}
+
+/* 작품 갤러리 */
+function openGallery(){
+ const code=document.getElementById("roomCode").value.trim();
+ const target=roomRef?roomRef.child("gallery"):db.ref("rooms/"+code+"/gallery");
+
+ document.getElementById("galleryModal").style.display="flex";
+ const grid=document.getElementById("galleryGrid");
+ grid.textContent="불러오는 중...";
+
+ target.limitToLast(50).once("value").then(snap=>{
+  grid.textContent="";
+  const val=snap.val();
+
+  if(!val){
+   grid.textContent="아직 저장된 작품이 없어요 ✨";
+   return;
+  }
+
+  Object.values(val).reverse().forEach(item=>{
+   const card=document.createElement("div");
+   card.className="gallery-item";
+
+   const img=document.createElement("img");
+   img.src=item.image;
+   img.alt="완성 작품";
+
+   const title=document.createElement("div");
+   title.className="gallery-title";
+   title.textContent=(item.topic||"작품")+" · "+(item.date||"");
+
+   card.append(img,title);
+   grid.appendChild(card);
+  });
+ }).catch(e=>{
+  grid.textContent="갤러리를 불러오지 못했어요: "+e.message;
+ });
+}
+
+function closeGallery(){
+ document.getElementById("galleryModal").style.display="none";
+}
+
+function downloadImage(){
+ const a=document.createElement("a");
+ a.href=canvas.toDataURL("image/png");
+ a.download="PLAVE_Relay_Drawing.png";
+ a.click();
+}
+
+/* 방 나가기 */
+async function leaveRoom(){
+ if(!roomRef)return;
+
+ clearInterval(timerInterval);
+ isMyTurn=false;
+
+ try{
+  await roomRef.child("players/"+myId).remove();
+ }catch(e){console.error(e)}
+
+ roomRef.off();
+ roomRef=null;
+ joined=false;
+ playerList=[];
+ gameState=null;
+ lastRoundId="";
+
+ document.getElementById("gameScreen").style.display="none";
+ document.getElementById("resultScreen").style.display="none";
+ document.getElementById("setupScreen").style.display="block";
+ document.getElementById("chatBox").textContent="";
+ document.getElementById("guestbookBox").textContent="";
+ document.getElementById("playersDisplay").textContent="";
+}
+
+document.getElementById("globalChatInput").addEventListener("keydown",e=>{
+ if(e.key==="Enter")sendGlobalChat();
+});
+document.getElementById("chatInput").addEventListener("keydown",e=>{
+ if(e.key==="Enter")sendChat();
+});
+document.getElementById("gbInput").addEventListener("keydown",e=>{
+ if(e.key==="Enter")sendGuestbook();
+});
+
+whiteCanvas();
+</script>
 </body>
 </html>
