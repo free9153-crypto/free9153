@@ -74,7 +74,7 @@
 </head>
 <body>
 
-    <!-- 1. 첫 화면 -->
+    <!-- 1. 첫 화면 (메인 로비) -->
     <div class="card" id="setupScreen">
         <h1>✨ PLAVE 턴제 멀티 릴레이 그림판</h1>
         <div class="sub">💬 접속 전 전체 로비 대화창 💬</div>
@@ -99,6 +99,8 @@
         </div>
 
         <button class="btn-main" onclick="joinRoom()">방 입장하기 🚀</button>
+        <!-- 🔥 메인 로비에 갤러리 버튼 추가! -->
+        <button class="btn-gallery" style="background:#6B21A8; margin-top:8px;" onclick="openGallery()">🖼️ 역대 작품 갤러리 구경하기</button>
     </div>
 
     <!-- 2. 게임 화면 -->
@@ -166,7 +168,7 @@
     <div class="modal-overlay" id="galleryModal">
         <div class="modal-content">
             <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                <h2 style="font-size:16px; color:#4C1D95; margin:0;">🖼️ 우리 방 역대 게시판</h2>
+                <h2 style="font-size:16px; color:#4C1D95; margin:0;">🖼️ 역대 작품 게시판</h2>
                 <button onclick="closeGallery()" style="background:#E5E7EB; border:none; padding:5px 10px; border-radius:8px; font-weight:bold; cursor:pointer;">✕ 닫기</button>
             </div>
             <div class="gallery-grid" id="galleryGrid">
@@ -184,9 +186,6 @@
         let myName = "", myId = "", roomRef = null, globalChatRef = null, timerInterval = null, timeLeft = 15;
         let color = "#000000", isEraser = false, isDrawing = false, isMyTurn = true;
         let playerList = [];
-
-        const canvas = document.getElementById('paintCanvas');
-        const ctx = canvas.getContext('2d');
 
         window.onload = function() {
             globalChatRef = db.ref('global_lobby_chat');
@@ -255,24 +254,6 @@
                     const img = new Image();
                     img.onload = () => ctx.drawImage(img, 0, 0);
                     img.src = dataUrl;
-                }
-            });
-
-            // 갤러리 실시간 동기화
-            roomRef.child('gallery').on('value', (snapshot) => {
-                const galleryGrid = document.getElementById('galleryGrid');
-                const val = snapshot.val();
-                if (val) {
-                    galleryGrid.innerHTML = "";
-                    const items = Object.values(val).reverse(); // 최신 작품이 위로
-                    items.forEach(item => {
-                        galleryGrid.innerHTML += `
-                            <div class="gallery-item">
-                                <img src="${item.image}">
-                                <div class="gallery-item-title">${item.topic} (${item.date})</div>
-                            </div>
-                        `;
-                    });
                 }
             });
 
@@ -360,7 +341,6 @@
             const imgData = canvas.toDataURL();
             document.getElementById('resultImage').src = imgData;
 
-            // 🖼️ 완공작 자동으로 방 갤러리에 저장
             if (roomRef) {
                 const now = new Date();
                 const timeStr = `${now.getHours()}:${String(now.getMinutes()).padStart(2, '0')}`;
@@ -373,12 +353,37 @@
         }
 
         function openGallery() {
+            const code = document.getElementById('roomCode').value.trim() || "PLAVE123";
+            const targetRef = roomRef ? roomRef.child('gallery') : db.ref('rooms/' + code + '/gallery');
+            
+            targetRef.once('value', (snapshot) => {
+                const galleryGrid = document.getElementById('galleryGrid');
+                const val = snapshot.val();
+                if (val) {
+                    galleryGrid.innerHTML = "";
+                    const items = Object.values(val).reverse();
+                    items.forEach(item => {
+                        galleryGrid.innerHTML += `
+                            <div class="gallery-item">
+                                <img src="${item.image}">
+                                <div class="gallery-item-title">${item.topic} (${item.date})</div>
+                            </div>
+                        `;
+                    });
+                } else {
+                    galleryGrid.innerHTML = '<div style="text-align:center; color:#6B21A8; font-size:13px; padding:20px;">아직 저장된 작품이 없습니다! 첫 판을 완성해보세요 ✨</div>';
+                }
+            });
+
             document.getElementById('galleryModal').style.display = 'flex';
         }
 
         function closeGallery() {
             document.getElementById('galleryModal').style.display = 'none';
         }
+
+        const canvas = document.getElementById('paintCanvas');
+        const ctx = canvas.getContext('2d');
 
         function initCanvas() {
             ctx.fillStyle = "#FFFFFF";
