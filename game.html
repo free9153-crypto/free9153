@@ -3,16 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>PLAVE 릴레이 그림 그리기 게임</title>
+    <title>PLAVE 실시간 멀티 릴레이 그림판</title>
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-database-compat.js"></script>
     <style>
         :root {
-            --yejun: #3B82F6;
-            --noah: #A855F7;
-            --bambi: #EC4899;
-            --eunho: #EF4444;
-            --hamin: #10B981;
+            --yejun: #3B82F6; --noah: #A855F7; --bambi: #EC4899;
+            --eunho: #EF4444; --hamin: #10B981;
         }
-
         * { box-sizing: border-box; touch-action: manipulation; }
         body {
             font-family: 'Malgun Gothic', sans-serif;
@@ -21,115 +20,100 @@
             display: flex; flex-direction: column; align-items: center; justify-content: center;
             min-height: 100vh;
         }
-
         .card {
             background: rgba(255, 255, 255, 0.95);
-            border-radius: 24px;
-            padding: 20px;
+            border-radius: 24px; padding: 20px;
             width: 100%; max-width: 460px;
             box-shadow: 0 10px 25px rgba(168, 85, 247, 0.15);
             border: 3px solid #FFF;
         }
-
-        h1 { font-size: 22px; color: #4C1D95; margin: 0 0 5px 0; text-align: center; }
+        h1 { font-size: 20px; color: #4C1D95; margin: 0 0 5px 0; text-align: center; }
         .sub { font-size: 13px; color: #6B21A8; text-align: center; margin-bottom: 15px; font-weight: bold; }
-
-        /* Setup Screen */
-        .setup-group { margin-bottom: 15px; text-align: left; }
-        label { font-size: 13px; font-weight: bold; color: #374151; display: block; margin-bottom: 5px; }
-        select, input {
-            width: 100%; padding: 10px; border-radius: 12px;
-            border: 2px solid #DDD6FE; font-size: 14px; outline: none;
-        }
-        .btn-main {
-            background: linear-gradient(90deg, #8B5CF6, #EC4899);
-            color: white; border: none; width: 100%; padding: 14px;
-            border-radius: 14px; font-size: 16px; font-weight: bold;
-            cursor: pointer; box-shadow: 0 4px 12px rgba(236, 72, 153, 0.3);
-        }
-
-        /* Game Screen */
+        
+        .setup-group { margin-bottom: 12px; text-align: left; }
+        label { font-size: 12px; font-weight: bold; color: #374151; display: block; margin-bottom: 4px; }
+        input, select { width: 100%; padding: 10px; border-radius: 12px; border: 2px solid #DDD6FE; font-size: 14px; outline: none; background: white; }
+        .btn-main { background: linear-gradient(90deg, #8B5CF6, #EC4899); color: white; border: none; width: 100%; padding: 14px; border-radius: 14px; font-size: 16px; font-weight: bold; cursor: pointer; }
+        
         #gameScreen, #resultScreen { display: none; }
         .header-status { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
         .topic-badge { background: #F3E8FF; color: #6B21A8; padding: 6px 12px; border-radius: 20px; font-size: 13px; font-weight: bold; }
-        
-        /* Timer */
         .timer-box { font-size: 20px; font-weight: 900; color: #6B21A8; }
-        .timer-warning { color: #EF4444; animation: pulse 0.5s infinite alternate; font-size: 24px; }
-        @keyframes pulse { from { transform: scale(1); } to { transform: scale(1.2); } }
 
-        .turn-info { font-size: 15px; font-weight: bold; color: #1F2937; margin-bottom: 8px; text-align: center; }
-
-        /* Canvas */
         .canvas-container { position: relative; width: 100%; background: white; border-radius: 16px; border: 3px solid #DDD6FE; overflow: hidden; }
-        canvas { display: block; width: 100%; height: 320px; background: white; cursor: crosshair; }
+        canvas { display: block; width: 100%; height: 260px; background: white; cursor: crosshair; }
 
-        /* Palette & Tools */
-        .palette { display: flex; gap: 8px; justify-content: center; margin: 12px 0; flex-wrap: wrap; }
-        .color-dot { width: 30px; height: 30px; border-radius: 50%; border: 2px solid white; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .palette { display: flex; gap: 8px; justify-content: center; margin: 10px 0; flex-wrap: wrap; }
+        .color-dot { width: 28px; height: 28px; border-radius: 50%; border: 2px solid white; cursor: pointer; }
         .color-dot.active { transform: scale(1.2); border-color: #4C1D95; }
-        .tools { display: flex; gap: 8px; justify-content: center; }
-        .btn-tool { background: #F3F4F6; border: none; padding: 8px 12px; border-radius: 10px; font-size: 12px; font-weight: bold; cursor: pointer; }
 
-        /* Overlay */
-        .overlay {
-            position: absolute; top:0; left:0; width:100%; height:100%;
-            background: rgba(139, 92, 246, 0.9); color: white;
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
-            font-size: 22px; font-weight: bold; border-radius: 13px; z-index: 10;
-        }
+        /* Chat Area */
+        .chat-box { background: #F9FAFB; border-radius: 12px; border: 1px solid #E5E7EB; height: 110px; overflow-y: auto; padding: 8px; margin-top: 10px; font-size: 12px; text-align: left; }
+        .chat-msg { margin-bottom: 4px; }
+        .chat-msg span { font-weight: bold; color: #6B21A8; }
+        .chat-input-group { display: flex; gap: 6px; margin-top: 6px; }
+        .chat-input-group input { flex: 1; padding: 8px; font-size: 12px; }
+        .chat-input-group button { background: #8B5CF6; color: white; border: none; padding: 8px 12px; border-radius: 8px; font-weight: bold; }
     </style>
 </head>
 <body>
 
     <!-- 1. 설정 화면 -->
     <div class="card" id="setupScreen">
-        <h1>✨ PLAVE 릴레이 그림판</h1>
-        <div class="sub">✨ 멤버들과 함께 완성하는 10초 릴레이 ✨</div>
+        <h1>✨ PLAVE 멀티 릴레이 그림판</h1>
+        <div class="sub">💬 채팅하며 친구들과 함께 즐기는 10초 릴레이 💬</div>
         
         <div class="setup-group">
-            <label>👥 참여 인원 선택 (1인~5인)</label>
+            <label>닉네임</label>
+            <input type="text" id="nickname" placeholder="닉네임을 입력하세요 (예: 밤비팬)">
+        </div>
+
+        <div class="setup-group">
+            <label>방 코드 (친구와 같은 코드로 접속!)</label>
+            <input type="text" id="roomCode" value="PLAVE123">
+        </div>
+
+        <div class="setup-group">
+            <label>👥 인원 선택</label>
             <select id="playerCount">
-                <option value="1">1인 자유 연습 모드</option>
-                <option value="2">2인 릴레이</option>
-                <option value="3">3인 릴레이</option>
-                <option value="4" selected>4인 릴레이</option>
-                <option value="5">5인 플레이브 완전체 릴레이</option>
+                <option value="1">1인 연습 모드</option>
+                <option value="2">2인 멀티</option>
+                <option value="3">3인 멀티</option>
+                <option value="4" selected>4인 멀티</option>
+                <option value="5">5인 멀티</option>
             </select>
         </div>
 
-        <button class="btn-main" onclick="startGame()">게임 시작하기 🚀</button>
+        <button class="btn-main" onclick="joinRoom()">방 접속하기 🚀</button>
     </div>
 
-    <!-- 2. 게임 진행 화면 -->
+    <!-- 2. 게임 화면 -->
     <div class="card" id="gameScreen">
         <div class="header-status">
             <span class="topic-badge" id="topicDisplay">주제: 로딩중</span>
             <div class="timer-box" id="timer">⏱️ 10</div>
         </div>
 
-        <div class="turn-info" id="turnDisplay">1번째 턴 (플레이어 1)</div>
+        <div style="font-size:14px; font-weight:bold; color:#1F2937; margin-bottom:6px; text-align:center;" id="turnDisplay">대기 중...</div>
 
         <div class="canvas-container">
-            <canvas id="paintCanvas" width="400" height="320"></canvas>
-            <div class="overlay" id="turnOverlay" style="display:none;"></div>
+            <canvas id="paintCanvas" width="400" height="260"></canvas>
         </div>
 
-        <!-- PLAVE 멤버 상징 팔레트 -->
         <div class="palette">
             <div class="color-dot active" style="background:#000000;" onclick="setColor('#000000', this)"></div>
-            <div class="color-dot" style="background:var(--yejun);" title="예준 파랑" onclick="setColor('#3B82F6', this)"></div>
-            <div class="color-dot" style="background:var(--noah);" title="노아 보라" onclick="setColor('#A855F7', this)"></div>
-            <div class="color-dot" style="background:var(--bambi);" title="밤비 분홍" onclick="setColor('#EC4899', this)"></div>
-            <div class="color-dot" style="background:var(--eunho);" title="은호 빨강" onclick="setColor('#EF4444', this)"></div>
-            <div class="color-dot" style="background:var(--hamin);" title="하민 초록" onclick="setColor('#10B981', this)"></div>
-            <div class="color-dot" style="background:#F59E0B;" onclick="setColor('#F59E0B', this)"></div>
+            <div class="color-dot" style="background:var(--yejun);" onclick="setColor('#3B82F6', this)"></div>
+            <div class="color-dot" style="background:var(--noah);" onclick="setColor('#A855F7', this)"></div>
+            <div class="color-dot" style="background:var(--bambi);" onclick="setColor('#EC4899', this)"></div>
+            <div class="color-dot" style="background:var(--eunho);" onclick="setColor('#EF4444', this)"></div>
+            <div class="color-dot" style="background:var(--hamin);" onclick="setColor('#10B981', this)"></div>
         </div>
 
-        <div class="tools">
-            <button class="btn-tool" onclick="setEraser()">🧹 지우개</button>
-            <button class="btn-tool" onclick="undo()">↩️ 되돌리기</button>
-            <button class="btn-tool" onclick="clearCanvas()">🗑️ 전체 지우기</button>
+        <!-- Realtime Chat -->
+        <div class="chat-box" id="chatBox"></div>
+        <div class="chat-input-group">
+            <input type="text" id="chatInput" placeholder="메시지를 입력하세요..." onkeypress="if(event.key==='Enter') sendChat()">
+            <button onclick="sendChat()">전송</button>
         </div>
     </div>
 
@@ -141,103 +125,86 @@
             <img id="resultImage" style="width:100%; border-radius:16px; border:3px solid #DDD6FE;">
         </div>
         <button class="btn-main" onclick="downloadImage()">💾 이미지 저장하기</button>
-        <button class="btn-tool" style="width:100%; margin-top:8px; padding:12px;" onclick="location.reload()">🔄 다시 하기</button>
+        <button style="width:100%; margin-top:8px; padding:12px; border:none; background:#F3F4F6; border-radius:10px; font-weight:bold;" onclick="location.reload()">🔄 메인으로 이동</button>
     </div>
 
     <script>
-        const topics = ["예준이의 하트", "노아의 쌩얼 아이돌 모드", "밤비의 핑크 덤벨", "은호의 레드 랩 폭발", "하민이의 은하수 댄스", "칼리고 디제잉", "아스테룸 유성우", "웨이팅 포 유 멤버들"];
-        let totalPlayers = 4, currentTurn = 1, timeLeft = 10, timerInterval = null;
-        let isDrawing = false, color = "#000000", lineWidth = 4;
-        let history = [];
+        // Firebase 데모 연동 설정 (무료 실시간 DB)
+        const firebaseConfig = { databaseURL: "https://plave-relay-default-rtdb.firebaseio.com" };
+        firebase.initializeApp(firebaseConfig);
+        const db = firebase.database();
 
+        let myName = "", roomRef = null, isMyTurn = true;
+        let color = "#000000", isDrawing = false;
         const canvas = document.getElementById('paintCanvas');
         const ctx = canvas.getContext('2d');
 
-        function startGame() {
-            totalPlayers = parseInt(document.getElementById('playerCount').value);
+        function joinRoom() {
+            myName = document.getElementById('nickname').value || "익명 힐러";
+            const code = document.getElementById('roomCode').value || "PLAVE123";
+            
+            roomRef = db.ref('rooms/' + code);
+            
             document.getElementById('setupScreen').style.display = 'none';
             document.getElementById('gameScreen').style.display = 'block';
-            
-            const randomTopic = topics[Math.floor(Math.random() * topics.length)];
-            document.getElementById('topicDisplay').innerText = `주제: ${randomTopic}`;
-            document.getElementById('resultTopic').innerText = `주제: ${randomTopic}`;
+
+            // 채팅 수신
+            roomRef.child('chat').on('child_added', (snapshot) => {
+                const data = snapshot.val();
+                const box = document.getElementById('chatBox');
+                box.innerHTML += `<div class="chat-msg"><span>${data.name}:</span> ${data.msg}</div>`;
+                box.scrollTop = box.scrollHeight;
+            });
+
+            // 캔버스 실시간 동기화
+            roomRef.child('draw').on('value', (snapshot) => {
+                const dataUrl = snapshot.val();
+                if (dataUrl) {
+                    const img = new Image();
+                    img.onload = () => ctx.drawImage(img, 0, 0);
+                    img.src = dataUrl;
+                }
+            });
 
             initCanvas();
-            startTurn();
+            sendSystemChat(`${myName} 님이 방에 입장하셨습니다!`);
         }
 
         function initCanvas() {
             ctx.fillStyle = "#FFFFFF";
             ctx.fillRect(0, 0, canvas.width, canvas.height);
-            saveHistory();
         }
 
-        function startTurn() {
-            if (currentTurn > totalPlayers) {
-                endGame();
-                return;
-            }
-
-            document.getElementById('turnDisplay').innerText = `${currentTurn}번째 턴 / 총 ${totalPlayers}명`;
-            timeLeft = 10;
-            updateTimerDisplay();
-
-            timerInterval = setInterval(() => {
-                timeLeft--;
-                updateTimerDisplay();
-                if (timeLeft <= 0) {
-                    clearInterval(timerInterval);
-                    nextTurn();
-                }
-            }, 1000);
+        function sendChat() {
+            const input = document.getElementById('chatInput');
+            if (!input.value.trim()) return;
+            roomRef.child('chat').push({ name: myName, msg: input.value });
+            input.value = "";
         }
 
-        function updateTimerDisplay() {
-            const timerEl = document.getElementById('timer');
-            timerEl.innerText = `⏱️ ${timeLeft}`;
-            if (timeLeft <= 3) {
-                timerEl.classList.add('timer-warning');
-                playBeep();
-            } else {
-                timerEl.classList.remove('timer-warning');
-            }
+        function sendSystemChat(msg) {
+            if (roomRef) roomRef.child('chat').push({ name: "📢 시스템", msg: msg });
         }
 
-        function nextTurn() {
-            currentTurn++;
-            if (currentTurn <= totalPlayers) {
-                const overlay = document.getElementById('turnOverlay');
-                overlay.innerText = `NEXT 턴 준비! (${currentTurn}번째 플레이어)`;
-                overlay.style.display = 'flex';
-                setTimeout(() => {
-                    overlay.style.display = 'none';
-                    startTurn();
-                }, 1500);
-            } else {
-                endGame();
-            }
-        }
-
-        function endGame() {
-            document.getElementById('gameScreen').style.display = 'none';
-            document.getElementById('resultScreen').style.display = 'block';
-            document.getElementById('resultImage').src = canvas.toDataURL();
-        }
-
-        /* 그림판 기능 (터치 & 마우스 지원) */
+        /* 터치/마우스 그림판 및 실시간 갱신 */
         function getPos(e) {
             const rect = canvas.getBoundingClientRect();
             const clientX = e.touches ? e.touches[0].clientX : e.clientX;
             const clientY = e.touches ? e.touches[0].clientY : e.clientY;
             return { x: (clientX - rect.left) * (canvas.width / rect.width), y: (clientY - rect.top) * (canvas.height / rect.height) };
         }
-
         function startDrawing(e) { isDrawing = true; draw(e); }
-        function stopDrawing() { if(isDrawing) { isDrawing = false; ctx.beginPath(); saveHistory(); } }
+        function stopDrawing() { 
+            if(isDrawing) { 
+                isDrawing = false; 
+                ctx.beginPath(); 
+                if(roomRef) roomRef.child('draw').set(canvas.toDataURL());
+            } 
+        }
         function draw(e) {
             if (!isDrawing) return;
             const pos = getPos(e);
-            ctx.lineWidth = lineWidth;
+            ctx.lineWidth = 4;
             ctx.lineCap = 'round';
             ctx.strokeStyle = color;
             ctx.lineTo(pos.x, pos.y);
@@ -257,26 +224,6 @@
             color = c;
             document.querySelectorAll('.color-dot').forEach(d => d.classList.remove('active'));
             if(el) el.classList.add('active');
-        }
-        function setEraser() { color = "#FFFFFF"; }
-        function clearCanvas() { ctx.fillRect(0, 0, canvas.width, canvas.height); saveHistory(); }
-        function saveHistory() { history.push(ctx.getImageData(0, 0, canvas.width, canvas.height)); }
-        function undo() {
-            if (history.length > 1) {
-                history.pop();
-                ctx.putImageData(history[history.length - 1], 0, 0);
-            }
-        }
-
-        function playBeep() {
-            try {
-                const ctxAudio = new (window.AudioContext || window.webkitAudioContext)();
-                const osc = ctxAudio.createOscillator();
-                osc.connect(ctxAudio.destination);
-                osc.frequency.value = 600;
-                osc.start();
-                osc.stop(ctxAudio.currentTime + 0.1);
-            } catch(e){}
         }
 
         function downloadImage() {
