@@ -25,15 +25,13 @@ canvas{width:100%;height:auto;background:white;border:2px solid #ded9f8;border-r
 #topic{font-size:23px;font-weight:bold;color:#765cc9;padding:12px}
 #chatMessages{height:190px;overflow-y:auto;text-align:left;background:#faf9ff;padding:10px;border-radius:10px}
 .chatline{padding:5px;border-bottom:1px solid #eee;overflow-wrap:anywhere}
-#gallery{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
-.work{background:#faf9ff;padding:8px;border-radius:12px;min-width:0}
+#gallery{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.work{background:#faf9ff;padding:8px;border-radius:12px}
 .work img{width:100%;border-radius:8px}
-.work p{overflow-wrap:anywhere}
-@media(max-width:450px){#gallery{grid-template-columns:repeat(2,minmax(0,1fr))}}
 </style>
 </head>
-<body>
 
+<body>
 <header>
 <h1>💙 PLAVE 릴레이 그림판 💜</h1>
 <p>다섯 멤버와 함께하는 그림 릴레이!</p>
@@ -98,7 +96,6 @@ canvas{width:100%;height:auto;background:white;border:2px solid #ded9f8;border-r
 
 <section class="panel">
 <h2>🖼️ 작품 갤러리</h2>
-<p class="small">최근 완성된 작품 3개가 자동으로 저장됩니다.</p>
 <div id="gallery">
 <p class="small">완성된 작품이 여기에 저장됩니다.</p>
 </div>
@@ -155,97 +152,93 @@ let roomData=null;
 let unsubscribe=null;
 let chatRef=null;
 let chatCallback=null;
-let galleryRef=null;
-let galleryCallback=null;
 let timerInterval=null;
 let drawing=false;
 let undoStack=[];
 let advancing=false;
-let lastSubmittedTurn=null;
+let galleryLoaded=false;
 
 function playerName(){
  return document.getElementById("playerName").value.trim()||"플레이어";
 }
+
 function roomPath(){
  return db.ref("rooms/"+roomCode);
 }
+
 function blankCanvas(){
  ctx.fillStyle="white";
  ctx.fillRect(0,0,canvas.width,canvas.height);
  undoStack=[];
 }
+
 function showGame(){
  document.getElementById("lobby").classList.add("hidden");
  document.getElementById("game").classList.remove("hidden");
  document.getElementById("roomCode").textContent=roomCode;
 }
+
 function makeCode(){
  return Math.random().toString(36).slice(2,8).toUpperCase();
 }
 
 async function createRoom(){
  try{
-  let code;
-  let roomRef;
-  let created=false;
+  const code=makeCode();
+  const players={};
+  players[playerId]={name:playerName(),joinedAt:Date.now()};
 
-  for(let i=0;i<10;i++){
-   code=makeCode();
-   roomRef=db.ref("rooms/"+code);
-   const result=await roomRef.transaction(room=>{
-    if(room!==null)return;
-    return {
-     host:playerId,
-     players:{[playerId]:{name:playerName(),joinedAt:Date.now()}},
-     playerOrder:[playerId],
-     status:"waiting",
-     turnIndex:0,
-     currentImage:"",
-     turnStartedAt:0,
-     topic:null,
-     createdAt:Date.now()
-    };
-   });
-   if(result.committed){created=true;break;}
-  }
-
-  if(!created)throw new Error("방 코드를 만들지 못했어요.");
+  await db.ref("rooms/"+code).set({
+   host:playerId,
+   players:players,
+   playerOrder:[playerId],
+   status:"waiting",
+   turnIndex:0,
+   currentImage:"",
+   turnStartedAt:0,
+   topic:null,
+   createdAt:Date.now()
+  });
 
   roomCode=code;
   showGame();
   listenRoom();
- }catch(e){alert("방 만들기 실패: "+e.message);}
+ }catch(e){
+  alert("방 만들기 실패: "+e.message);
+ }
 }
 
 async function joinRoom(){
  try{
   const code=document.getElementById("roomInput").value.trim().toUpperCase();
-  if(!/^[A-Z0-9]{6}$/.test(code))return alert("방 코드 6자리를 입력해 주세요.");
+  if(!code)return alert("방 코드를 입력해 주세요.");
 
   const roomRef=db.ref("rooms/"+code);
-  let errorMessage="";
+  const snap=await roomRef.get();
 
-  const result=await roomRef.transaction(room=>{
-   if(!room){errorMessage="방이 없어요.";return;}
-   const order=room.playerOrder||[];
-   if(room.status!=="waiting"){errorMessage="이미 시작한 방이에요.";return;}
-   if(!room.players?.[playerId]&&order.length>=5){errorMessage="최대 5명까지 참가할 수 있어요.";return;}
+  if(!snap.exists())return alert("방이 없어요.");
 
-   room.players=room.players||{};
-   room.players[playerId]={
+  const room=snap.val();
+  const order=room.playerOrder||[];
+
+  if(room.status!=="waiting")return alert("이미 시작한 방이에요.");
+  if(!room.players[playerId]&&order.length>=5)
+   return alert("최대 5명까지 참가할 수 있어요.");
+
+  if(!room.players[playerId]){
+   await roomRef.child("players/"+playerId).set({
     name:playerName(),
-    joinedAt:room.players[playerId]?.joinedAt||Date.now()
-   };
-   if(!order.includes(playerId))room.playerOrder=[...order,playerId];
-   return room;
-  });
-
-  if(!result.committed)return alert(errorMessage||"입장에 실패했어요.");
+    joinedAt:Date.now()
+   });
+   await roomRef.child("playerOrder").set([...order,playerId]);
+  }
 
   roomCode=code;
   showGame();
   listenRoom();
- }catch(e){alert("입장 실패: "+e.message);}
+ }catch(e){
+  alert("입장 실패: "+e.message);
+ }
 }
 
 function listenRoom(){
@@ -265,71 +258,6 @@ function listenRoom(){
  unsubscribe=()=>r.off("value",callback);
 
  listenChat();
- listenGallery();
-}
-
-function listenGallery(){
- if(galleryRef&&galleryCallback)galleryRef.off("value",galleryCallback);
- galleryRef=db.ref("gallery");
- galleryCallback=snap=>renderGallery(snap.val());
- galleryRef.on("value",galleryCallback);
-}
-
-function renderGallery(data){
- const box=document.getElementById("gallery");
- box.innerHTML="";
-
- if(!data||!Object.keys(data).length){
-  box.innerHTML='<p class="small">아직 완성된 작품이 없어요.</p>';
-  return;
- }
-
- Object.entries(data)
-  .sort((a,b)=>(b[1].createdAt||0)-(a[1].createdAt||0))
-  .forEach(([id,work])=>{
-   const div=document.createElement("div");
-   div.className="work";
-
-   const img=document.createElement("img");
-   img.src=work.image;
-   img.alt="완성된 릴레이 그림";
-   img.loading="lazy";
-
-   const title=document.createElement("p");
-   title.textContent=work.topic?.name||"PLAVE 작품";
-
-   const names=document.createElement("p");
-   names.className="small";
-   names.textContent=(work.players||[]).join(" → ");
-
-   div.append(img,title,names);
-   box.appendChild(div);
-  });
-}
-
-async function saveGallery(work,gameId){
- const gallery=db.ref("gallery");
-
- const result=await gallery.transaction(data=>{
-  data=data||{};
-
-  if(data[gameId])return;
-
-  data[gameId]=work;
-
-  const entries=Object.entries(data).sort(
-   (a,b)=>(a[1].createdAt||0)-(b[1].createdAt||0)
-  );
-
-  while(entries.length>3){
-   const oldest=entries.shift();
-   delete data[oldest[0]];
-  }
-
-  return data;
- });
-
- return result.committed;
 }
 
 function renderRoom(){
@@ -360,10 +288,16 @@ function renderRoom(){
   const myTurn=currentId===playerId;
 
   document.getElementById("topic").textContent=roomData.topic?.name||"주제 없음";
-  document.getElementById("category").textContent="카테고리: "+(roomData.topic?.category||"");
-  document.getElementById("turnInfo").textContent=`차례 ${roomData.turnIndex+1}/${order.length} · ${currentPlayer?.name||"플레이어"}`;
-  document.getElementById("message").textContent=myTurn?"✏️ 지금 당신의 차례예요!":"다른 사람이 그리고 있어요.";
-  document.getElementById("submitBtn").disabled=!myTurn||advancing;
+  document.getElementById("category").textContent=
+   "카테고리: "+(roomData.topic?.category||"");
+
+  document.getElementById("turnInfo").textContent=
+   `차례 ${roomData.turnIndex+1}/${order.length} · ${currentPlayer?.name||"플레이어"}`;
+
+  document.getElementById("message").textContent=
+   myTurn?"✏️ 지금 당신의 차례예요!":"다른 사람이 그리고 있어요.";
+
+  document.getElementById("submitBtn").disabled=!myTurn;
 
   if(roomData.currentImage&&canvas.dataset.image!==roomData.currentImage){
    loadImage(roomData.currentImage);
@@ -373,36 +307,33 @@ function renderRoom(){
   }
  }else{
   stopTimer();
-  document.getElementById("turnInfo").textContent=status==="finished"?"🎉 릴레이 완성!":"친구들을 기다리고 있어요.";
+  document.getElementById("turnInfo").textContent=
+   status==="finished"?"🎉 릴레이 완성!":"친구들을 기다리고 있어요.";
   document.getElementById("topic").textContent="게임 대기 중";
   document.getElementById("timer").textContent="10";
  }
+ loadGallery();
 }
 
 async function startGame(){
  if(!roomData||roomData.host!==playerId)return;
  const order=roomData.playerOrder||[];
+
  if(order.length<2)return alert("최소 2명이 필요해요.");
 
  const topic=topics[Math.floor(Math.random()*topics.length)];
- const result=await roomPath().transaction(room=>{
-  if(!room||room.host!==playerId||room.status!=="waiting")return;
-  if((room.playerOrder||[]).length<2)return;
-  room.status="playing";
-  room.turnIndex=0;
-  room.currentImage="";
-  room.topic=topic;
-  room.turnStartedAt=Date.now();
-  room.turnResults={};
-  room.gameId=roomCode+"_"+Date.now();
-  return room;
- });
 
- if(!result.committed)alert("게임을 시작할 수 없어요.");
- else{
-  blankCanvas();
-  canvas.dataset.image="blank";
- }
+ blankCanvas();
+ canvas.dataset.image="blank";
+
+ await roomPath().update({
+  status:"playing",
+  turnIndex:0,
+  currentImage:"",
+  topic:topic,
+  turnStartedAt:Date.now(),
+  turnResults:{}
+ });
 }
 
 function isMyTurn(){
@@ -416,23 +347,28 @@ function startTimer(){
 
  function tick(){
   if(!roomData||roomData.status!=="playing")return;
+
   const started=Number(roomData.turnStartedAt||0);
   const elapsed=(Date.now()-started)/1000;
   const remaining=Math.max(0,Math.ceil(10-elapsed));
+
   document.getElementById("timer").textContent=remaining;
 
   if(remaining<=0&&isMyTurn()){
    submitDrawing(true);
   }
  }
+
  tick();
  timerInterval=setInterval(tick,250);
 }
+
 function stopTimer(){
  if(timerInterval)clearInterval(timerInterval);
  timerInterval=null;
 }
 
+// 방 데이터 변경에 따라 타이머 시작
 const originalRender=renderRoom;
 renderRoom=function(){
  originalRender();
@@ -442,13 +378,11 @@ renderRoom=function(){
 function loadImage(data){
  const img=new Image();
  img.onload=()=>{
-  ctx.fillStyle="white";
-  ctx.fillRect(0,0,canvas.width,canvas.height);
+  ctx.clearRect(0,0,canvas.width,canvas.height);
   ctx.drawImage(img,0,0,canvas.width,canvas.height);
   canvas.dataset.image=data;
   undoStack=[];
  };
- img.onerror=()=>console.error("그림을 불러오지 못했어요.");
  img.src=data;
 }
 
@@ -490,17 +424,14 @@ canvas.addEventListener("pointerup",()=>{
  drawing=false;
  ctx.closePath();
 });
-canvas.addEventListener("pointercancel",()=>{
- drawing=false;
- ctx.closePath();
-});
+canvas.addEventListener("pointercancel",()=>drawing=false);
 
 function clearCanvas(){
  if(!isMyTurn())return;
  saveUndo();
  blankCanvas();
- canvas.dataset.image="blank";
 }
+
 function undoCanvas(){
  if(!isMyTurn()||!undoStack.length)return;
  loadImage(undoStack.pop());
@@ -516,12 +447,10 @@ async function submitDrawing(auto=false){
  try{
   const image=canvas.toDataURL("image/jpeg",0.65);
   const expectedTurn=roomData.turnIndex;
-  const expectedGame=roomData.gameId;
   const r=roomPath();
 
   const result=await r.transaction(room=>{
    if(!room||room.status!=="playing")return;
-   if(room.gameId!==expectedGame)return;
    if(room.turnIndex!==expectedTurn)return;
    if(room.turnResults?.[expectedTurn])return;
 
@@ -533,6 +462,7 @@ async function submitDrawing(auto=false){
 
    const order=room.playerOrder||[];
    const next=expectedTurn+1;
+
    room.currentImage=image;
 
    if(next>=order.length){
@@ -545,23 +475,20 @@ async function submitDrawing(auto=false){
    return room;
   });
 
-  if(!result.committed)return;
+  if(!result.committed){
+   return;
+  }
 
-  const finishedRoom=result.snapshot.val();
-
-  if(finishedRoom.status==="finished"){
-   const gameId=finishedRoom.gameId||expectedGame;
-
-   const saved=await saveGallery({
+  if(result.snapshot.val().status==="finished"){
+   await db.ref("gallery").push({
     image:image,
-    topic:finishedRoom.topic,
-    players:(finishedRoom.playerOrder||[]).map(
-     id=>finishedRoom.players?.[id]?.name||"플레이어"
+    topic:result.snapshot.val().topic,
+    players:(result.snapshot.val().playerOrder||[]).map(
+     id=>result.snapshot.val().players?.[id]?.name||"플레이어"
     ),
-    createdAt:finishedRoom.finishedAt||Date.now()
-   },gameId);
-
-   if(saved)alert("🎉 작품 완성! 갤러리에 저장했어요!");
+    createdAt:Date.now()
+   });
+   alert("🎉 작품 완성! 갤러리에 저장했어요!");
   }else if(!auto){
    alert("그림을 다음 사람에게 전달했어요! 💙");
   }
@@ -588,6 +515,7 @@ function listenChat(){
 function showChatMessage(data){
  if(!data)return;
  const box=document.getElementById("chatMessages");
+
  if(box.querySelector(".small"))box.innerHTML="";
 
  const line=document.createElement("div");
@@ -608,6 +536,7 @@ async function sendChat(){
  const input=document.getElementById("chatInput");
  const message=input.value.trim();
  if(!message||!roomCode)return;
+
  input.value="";
 
  try{
@@ -626,6 +555,44 @@ document.getElementById("chatInput").addEventListener("keydown",e=>{
  if(e.key==="Enter")sendChat();
 });
 
+async function loadGallery(){
+ if(galleryLoaded)return;
+ galleryLoaded=true;
+
+ const box=document.getElementById("gallery");
+ try{
+  const snap=await db.ref("gallery").limitToLast(30).get();
+  box.innerHTML="";
+
+  if(!snap.exists()){
+   box.innerHTML='<p class="small">아직 완성된 작품이 없어요.</p>';
+   return;
+  }
+
+  Object.values(snap.val()).reverse().forEach(work=>{
+   const div=document.createElement("div");
+   div.className="work";
+
+   const img=document.createElement("img");
+   img.src=work.image;
+
+   const title=document.createElement("p");
+   title.textContent=work.topic?.name||"PLAVE 작품";
+
+   const names=document.createElement("p");
+   names.className="small";
+   names.textContent=(work.players||[]).join(" → ");
+
+   div.append(img,title,names);
+   box.appendChild(div);
+  });
+ }catch(e){
+  box.innerHTML='<p class="small">갤러리를 불러오지 못했어요.</p>';
+ }finally{
+  galleryLoaded=false;
+ }
+}
+
 function copyRoom(){
  if(navigator.clipboard){
   navigator.clipboard.writeText(roomCode)
@@ -641,33 +608,19 @@ async function leaveRoom(remove=true){
 
  if(unsubscribe)unsubscribe();
  if(chatRef&&chatCallback)chatRef.off("child_added",chatCallback);
- if(galleryRef&&galleryCallback)galleryRef.off("value",galleryCallback);
 
  if(remove&&roomCode&&roomData){
   try{
-   const r=roomPath();
-   if(roomData.status==="waiting"){
-    await r.transaction(room=>{
-     if(!room)return;
-     if(room.host===playerId){
-      return null;
-     }
-     if(!room.players?.[playerId])return;
-     delete room.players[playerId];
-     room.playerOrder=(room.playerOrder||[]).filter(id=>id!==playerId);
-     return room;
-    });
-   }else if(roomData.host===playerId){
-    const nextHost=(roomData.playerOrder||[]).find(id=>id!==playerId);
-    if(nextHost){
-     await r.transaction(room=>{
-      if(!room||room.host!==playerId)return;
-      room.host=nextHost;
-      return room;
-     });
-    }
+   if(roomData.host===playerId){
+    await roomPath().remove();
+   }else{
+    await roomPath().child("players/"+playerId).remove();
+    const order=(roomData.playerOrder||[]).filter(id=>id!==playerId);
+    await roomPath().child("playerOrder").set(order);
    }
-  }catch(e){console.log(e);}
+  }catch(e){
+   console.log(e);
+  }
  }
 
  roomCode="";
@@ -675,14 +628,13 @@ async function leaveRoom(remove=true){
  unsubscribe=null;
  chatRef=null;
  chatCallback=null;
- galleryRef=null;
- galleryCallback=null;
 
  document.getElementById("game").classList.add("hidden");
  document.getElementById("lobby").classList.remove("hidden");
  document.getElementById("chatMessages").innerHTML="";
  document.getElementById("gallery").innerHTML=
-  '<p class="small">완성된 작품이 여기에 저장됩니다.</p>';
+  '<p class="small">완성된 작품을 불러오려면 방에 입장해 주세요.</p>';
+ galleryLoaded=false;
 }
 
 function escapeHTML(s){
