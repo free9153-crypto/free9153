@@ -16,50 +16,53 @@
         body {
             font-family: 'Malgun Gothic', sans-serif;
             background: linear-gradient(135deg, #E0F2FE 0%, #F3E8FF 50%, #FCE7F3 100%);
-            margin: 0; padding: 15px;
-            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            margin: 0; padding: 10px;
+            display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
             min-height: 100vh;
         }
         .card {
-            background: rgba(255, 255, 255, 0.95);
-            border-radius: 24px; padding: 20px;
+            background: rgba(255, 255, 255, 0.98);
+            border-radius: 20px; padding: 15px;
             width: 100%; max-width: 460px;
             box-shadow: 0 10px 25px rgba(168, 85, 247, 0.15);
             border: 3px solid #FFF;
+            margin-bottom: 20px;
         }
-        h1 { font-size: 20px; color: #4C1D95; margin: 0 0 5px 0; text-align: center; }
-        .sub { font-size: 13px; color: #6B21A8; text-align: center; margin-bottom: 15px; font-weight: bold; }
+        h1 { font-size: 18px; color: #4C1D95; margin: 0 0 5px 0; text-align: center; }
+        .sub { font-size: 12px; color: #6B21A8; text-align: center; margin-bottom: 10px; font-weight: bold; }
         
-        .setup-group { margin-bottom: 12px; text-align: left; }
-        label { font-size: 12px; font-weight: bold; color: #374151; display: block; margin-bottom: 4px; }
-        input { width: 100%; padding: 10px; border-radius: 12px; border: 2px solid #DDD6FE; font-size: 14px; outline: none; background: white; }
-        .btn-main { background: linear-gradient(90deg, #8B5CF6, #EC4899); color: white; border: none; width: 100%; padding: 14px; border-radius: 14px; font-size: 16px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 12px rgba(236, 72, 153, 0.3); margin-top: 5px; }
-        .btn-start { background: linear-gradient(90deg, #10B981, #3B82F6); color: white; border: none; width: 100%; padding: 12px; border-radius: 12px; font-size: 15px; font-weight: bold; cursor: pointer; margin-bottom: 10px; }
+        .setup-group { margin-bottom: 10px; text-align: left; }
+        label { font-size: 11px; font-weight: bold; color: #374151; display: block; margin-bottom: 3px; }
+        input { width: 100%; padding: 8px; border-radius: 10px; border: 2px solid #DDD6FE; font-size: 14px; outline: none; background: white; }
+        .btn-main { background: linear-gradient(90deg, #8B5CF6, #EC4899); color: white; border: none; width: 100%; padding: 12px; border-radius: 12px; font-size: 15px; font-weight: bold; cursor: pointer; box-shadow: 0 4px 12px rgba(236, 72, 153, 0.3); margin-top: 5px; }
+        
+        /* 시작 버튼을 최상단으로 올려서 무조건 보이게 배치 */
+        .btn-start { background: linear-gradient(90deg, #10B981, #3B82F6); color: white; border: none; width: 100%; padding: 14px; border-radius: 12px; font-size: 16px; font-weight: bold; cursor: pointer; margin-bottom: 8px; box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3); }
         
         #gameScreen, #resultScreen { display: none; }
-        .header-status { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
-        .topic-badge { background: #F3E8FF; color: #6B21A8; padding: 6px 12px; border-radius: 20px; font-size: 13px; font-weight: bold; }
-        .timer-box { font-size: 20px; font-weight: 900; color: #6B21A8; }
+        .header-status { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+        .topic-badge { background: #F3E8FF; color: #6B21A8; padding: 5px 10px; border-radius: 15px; font-size: 12px; font-weight: bold; }
+        .timer-box { font-size: 18px; font-weight: 900; color: #6B21A8; }
 
-        .canvas-container { position: relative; width: 100%; background: white; border-radius: 16px; border: 3px solid #DDD6FE; overflow: hidden; }
-        canvas { display: block; width: 100%; height: 240px; background: white; cursor: crosshair; }
-        .turn-lock-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.2); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 18px; text-shadow: 0 2px 4px rgba(0,0,0,0.5); pointer-events: none; }
+        .canvas-container { position: relative; width: 100%; background: white; border-radius: 14px; border: 3px solid #DDD6FE; overflow: hidden; }
+        canvas { display: block; width: 100%; height: 220px; background: white; cursor: crosshair; }
+        .turn-lock-overlay { position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.2); display: flex; align-items: center; justify-content: center; color: white; font-weight: bold; font-size: 16px; text-shadow: 0 2px 4px rgba(0,0,0,0.5); pointer-events: none; }
 
-        .controls-row { display: flex; justify-content: space-between; align-items: center; margin: 10px 0; flex-wrap: wrap; gap: 6px; }
-        .palette { display: flex; gap: 6px; align-items: center; }
-        .color-dot { width: 26px; height: 26px; border-radius: 50%; border: 2px solid white; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .controls-row { display: flex; justify-content: space-between; align-items: center; margin: 8px 0; flex-wrap: wrap; gap: 5px; }
+        .palette { display: flex; gap: 5px; align-items: center; }
+        .color-dot { width: 24px; height: 24px; border-radius: 50%; border: 2px solid white; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
         .color-dot.active { transform: scale(1.2); border-color: #4C1D95; }
         
-        .tool-btns { display: flex; gap: 6px; }
-        .btn-tool { background: #F3F4F6; border: 1px solid #D1D5DB; padding: 6px 10px; border-radius: 8px; font-size: 12px; font-weight: bold; cursor: pointer; color: #374151; }
+        .tool-btns { display: flex; gap: 5px; }
+        .btn-tool { background: #F3F4F6; border: 1px solid #D1D5DB; padding: 5px 8px; border-radius: 6px; font-size: 11px; font-weight: bold; cursor: pointer; color: #374151; }
         .btn-tool.eraser-active { background: #FEF3C7; border-color: #F59E0B; color: #B45309; }
 
-        .chat-box, .guestbook-box { background: #F9FAFB; border-radius: 12px; border: 1px solid #E5E7EB; height: 90px; overflow-y: auto; padding: 8px; margin-top: 8px; font-size: 12px; text-align: left; }
-        .chat-msg { margin-bottom: 4px; }
+        .chat-box, .guestbook-box { background: #F9FAFB; border-radius: 10px; border: 1px solid #E5E7EB; height: 80px; overflow-y: auto; padding: 6px; margin-top: 6px; font-size: 11px; text-align: left; }
+        .chat-msg { margin-bottom: 3px; }
         .chat-msg span { font-weight: bold; color: #6B21A8; }
-        .chat-input-group { display: flex; gap: 6px; margin-top: 6px; }
-        .chat-input-group input { flex: 1; padding: 8px; font-size: 12px; }
-        .chat-input-group button { background: #8B5CF6; color: white; border: none; padding: 8px 12px; border-radius: 8px; font-weight: bold; }
+        .chat-input-group { display: flex; gap: 5px; margin-top: 5px; }
+        .chat-input-group input { flex: 1; padding: 7px; font-size: 11px; }
+        .chat-input-group button { background: #8B5CF6; color: white; border: none; padding: 7px 10px; border-radius: 6px; font-weight: bold; font-size: 11px; }
     </style>
 </head>
 <body>
@@ -71,14 +74,14 @@
 
         <div class="setup-group">
             <label>💬 실시간 전체 로비 채팅</label>
-            <div class="chat-box" id="globalChatBox" style="height: 110px;"></div>
+            <div class="chat-box" id="globalChatBox" style="height: 90px;"></div>
             <div class="chat-input-group">
                 <input type="text" id="globalChatInput" placeholder="접속자들과 자유롭게 대화해보세요!" onkeypress="if(event.key==='Enter') sendGlobalChat()">
                 <button onclick="sendGlobalChat()">전송</button>
             </div>
         </div>
         
-        <div class="setup-group" style="margin-top:8px;">
+        <div class="setup-group" style="margin-top:6px;">
             <label>닉네임</label>
             <input type="text" id="nickname" placeholder="닉네임을 입력하세요 (예: 밤비팬)">
         </div>
@@ -88,21 +91,22 @@
             <input type="text" id="roomCode" value="PLAVE123">
         </div>
 
-        <button class="btn-main" onclick="joinRoom()">방 입장 및 게임 시작 🚀</button>
+        <button class="btn-main" onclick="joinRoom()">방 입장하기 🚀</button>
     </div>
 
     <!-- 2. 게임 화면 -->
     <div class="card" id="gameScreen">
+        <!-- 🔥 시작 버튼을 상단에 눈에 띄게 배치 -->
+        <button class="btn-start" id="startBtn" onclick="startGame()">🎨 그림판 시작하기!</button>
+
         <div class="header-status">
             <span class="topic-badge" id="topicDisplay">주제: 대기 중</span>
             <div class="timer-box" id="timer">⏱️ 15</div>
         </div>
-
-        <button class="btn-start" id="startBtn" onclick="startGame()">🎨 그림판 시작하기!</button>
-        <div style="font-size:13px; font-weight:bold; color:#1F2937; margin-bottom:6px; text-align:center;" id="turnDisplay">시작 버튼을 눌러주세요</div>
+        <div style="font-size:12px; font-weight:bold; color:#1F2937; margin-bottom:5px; text-align:center;" id="turnDisplay">시작 버튼을 눌러주세요</div>
 
         <div class="canvas-container">
-            <canvas id="paintCanvas" width="400" height="240"></canvas>
+            <canvas id="paintCanvas" width="400" height="220"></canvas>
             <div class="turn-lock-overlay" id="lockOverlay" style="display:none;">🔒 다른 사람 차례입니다</div>
         </div>
 
@@ -133,20 +137,20 @@
     <div class="card" id="resultScreen">
         <h1>🎉 작품 완성!</h1>
         <div class="sub" id="resultTopic"></div>
-        <div style="text-align:center; margin: 10px 0;">
-            <img id="resultImage" style="width:100%; border-radius:16px; border:3px solid #DDD6FE;">
+        <div style="text-align:center; margin: 8px 0;">
+            <img id="resultImage" style="width:100%; border-radius:14px; border:3px solid #DDD6FE;">
         </div>
 
         <!-- 📖 방명록 영역 -->
-        <div style="font-size:14px; font-weight:bold; color:#4C1D95; text-align:left; margin-top:10px;">📖 작품 방명록</div>
+        <div style="font-size:13px; font-weight:bold; color:#4C1D95; text-align:left; margin-top:8px;">📖 작품 방명록</div>
         <div class="guestbook-box" id="guestbookBox"></div>
         <div class="chat-input-group">
-            <input type="text" id="gbInput" placeholder="작품 감상평을 남겨주세요!" onkeypress="if(event.key==='Enter') sendGuestbook()">
+            <input type="text" id="gbInput" placeholder="감상평을 남겨주세요!" onkeypress="if(event.key==='Enter') sendGuestbook()">
             <button onclick="sendGuestbook()">남기기</button>
         </div>
 
-        <button class="btn-main" style="margin-top:10px;" onclick="downloadImage()">💾 이미지 저장하기</button>
-        <button class="btn-start" style="margin-top:8px; padding:12px;" onclick="nextTopicGame()">🔄 다음 판 시작하기</button>
+        <button class="btn-main" style="margin-top:8px;" onclick="downloadImage()">💾 이미지 저장하기</button>
+        <button class="btn-start" style="margin-top:6px; padding:10px;" onclick="nextTopicGame()">🔄 다음 판 시작하기</button>
     </div>
 
     <script>
@@ -243,7 +247,6 @@
             
             initCanvas();
 
-            // 혼자 있으면 바로 내 차례로 시작, 여럿이면 릴레이 턴 시작!
             if (playerList.length <= 1) {
                 isMyTurn = true;
                 timeLeft = 20;
