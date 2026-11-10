@@ -2,88 +2,288 @@
 <html lang="ko">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>PLAVE 릴레이 그림 그리기 게임</title>
     <style>
-        body {
-            font-family: 'Malgun Gothic', sans-serif;
-            background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
-            text-align: center;
-            margin: 0;
-            padding: 20px;
-            min-height: 100vh;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-        .container {
-            background: white;
-            max-width: 480px;
-            width: 100%;
-            margin: auto;
-            padding: 30px;
-            border-radius: 20px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
-        }
-        h1 { font-size: 24px; color: #4a5568; margin-bottom: 10px; }
-        .sub-title { font-size: 15px; color: #718096; margin-bottom: 25px; }
-        
-        .setting-box {
-            margin-bottom: 20px;
-            text-align: left;
-            background: #f7fafc;
-            padding: 15px;
-            border-radius: 12px;
-        }
-        label { font-size: 14px; font-weight: bold; color: #2d3748; display: block; margin-bottom: 8px; }
-        select {
-            width: 100%;
-            padding: 10px;
-            border-radius: 8px;
-            border: 1px solid #cbd5e0;
-            font-size: 15px;
-            background: white;
+        :root {
+            --yejun: #3B82F6;
+            --noah: #A855F7;
+            --bambi: #EC4899;
+            --eunho: #EF4444;
+            --hamin: #10B981;
         }
 
-        .start-btn {
-            background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%);
-            color: white;
-            border: none;
-            width: 100%;
-            padding: 14px;
-            font-size: 16px;
-            font-weight: bold;
-            border-radius: 12px;
-            cursor: pointer;
-            box-shadow: 0 4px 12px rgba(99, 102, 241, 0.3);
-            transition: transform 0.1s;
+        * { box-sizing: border-box; touch-action: manipulation; }
+        body {
+            font-family: 'Malgun Gothic', sans-serif;
+            background: linear-gradient(135deg, #E0F2FE 0%, #F3E8FF 50%, #FCE7F3 100%);
+            margin: 0; padding: 15px;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            min-height: 100vh;
         }
-        .start-btn:active { transform: scale(0.98); }
+
+        .card {
+            background: rgba(255, 255, 255, 0.95);
+            border-radius: 24px;
+            padding: 20px;
+            width: 100%; max-width: 460px;
+            box-shadow: 0 10px 25px rgba(168, 85, 247, 0.15);
+            border: 3px solid #FFF;
+        }
+
+        h1 { font-size: 22px; color: #4C1D95; margin: 0 0 5px 0; text-align: center; }
+        .sub { font-size: 13px; color: #6B21A8; text-align: center; margin-bottom: 15px; font-weight: bold; }
+
+        /* Setup Screen */
+        .setup-group { margin-bottom: 15px; text-align: left; }
+        label { font-size: 13px; font-weight: bold; color: #374151; display: block; margin-bottom: 5px; }
+        select, input {
+            width: 100%; padding: 10px; border-radius: 12px;
+            border: 2px solid #DDD6FE; font-size: 14px; outline: none;
+        }
+        .btn-main {
+            background: linear-gradient(90deg, #8B5CF6, #EC4899);
+            color: white; border: none; width: 100%; padding: 14px;
+            border-radius: 14px; font-size: 16px; font-weight: bold;
+            cursor: pointer; box-shadow: 0 4px 12px rgba(236, 72, 153, 0.3);
+        }
+
+        /* Game Screen */
+        #gameScreen, #resultScreen { display: none; }
+        .header-status { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+        .topic-badge { background: #F3E8FF; color: #6B21A8; padding: 6px 12px; border-radius: 20px; font-size: 13px; font-weight: bold; }
+        
+        /* Timer */
+        .timer-box { font-size: 20px; font-weight: 900; color: #6B21A8; }
+        .timer-warning { color: #EF4444; animation: pulse 0.5s infinite alternate; font-size: 24px; }
+        @keyframes pulse { from { transform: scale(1); } to { transform: scale(1.2); } }
+
+        .turn-info { font-size: 15px; font-weight: bold; color: #1F2937; margin-bottom: 8px; text-align: center; }
+
+        /* Canvas */
+        .canvas-container { position: relative; width: 100%; background: white; border-radius: 16px; border: 3px solid #DDD6FE; overflow: hidden; }
+        canvas { display: block; width: 100%; height: 320px; background: white; cursor: crosshair; }
+
+        /* Palette & Tools */
+        .palette { display: flex; gap: 8px; justify-content: center; margin: 12px 0; flex-wrap: wrap; }
+        .color-dot { width: 30px; height: 30px; border-radius: 50%; border: 2px solid white; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
+        .color-dot.active { transform: scale(1.2); border-color: #4C1D95; }
+        .tools { display: flex; gap: 8px; justify-content: center; }
+        .btn-tool { background: #F3F4F6; border: none; padding: 8px 12px; border-radius: 10px; font-size: 12px; font-weight: bold; cursor: pointer; }
+
+        /* Overlay */
+        .overlay {
+            position: absolute; top:0; left:0; width:100%; height:100%;
+            background: rgba(139, 92, 246, 0.9); color: white;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            font-size: 22px; font-weight: bold; border-radius: 13px; z-index: 10;
+        }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1>🎨 PLAVE 릴레이 그림판</h1>
-        <div class="sub-title">버츄얼 아이돌 예능 스타일 릴레이 게임</div>
+
+    <!-- 1. 설정 화면 -->
+    <div class="card" id="setupScreen">
+        <h1>✨ PLAVE 릴레이 그림판</h1>
+        <div class="sub">✨ 멤버들과 함께 완성하는 10초 릴레이 ✨</div>
         
-        <div class="setting-box">
-            <label for="playerCount">👥 플레이어 인원 선택 (1명 ~ 5명)</label>
+        <div class="setup-group">
+            <label>👥 참여 인원 선택 (1인~5인)</label>
             <select id="playerCount">
-                <option value="1">1인 혼자 연습 모드</option>
-                <option value="2">2인 플레이</option>
-                <option value="3">3인 플레이</option>
-                <option value="4" selected>4인 플레이</option>
-                <option value="5">5인 플레이</option>
+                <option value="1">1인 자유 연습 모드</option>
+                <option value="2">2인 릴레이</option>
+                <option value="3">3인 릴레이</option>
+                <option value="4" selected>4인 릴레이</option>
+                <option value="5">5인 플레이브 완전체 릴레이</option>
             </select>
         </div>
 
-        <button class="start-btn" onclick="startGame()">게임 시작하기!</button>
+        <button class="btn-main" onclick="startGame()">게임 시작하기 🚀</button>
+    </div>
+
+    <!-- 2. 게임 진행 화면 -->
+    <div class="card" id="gameScreen">
+        <div class="header-status">
+            <span class="topic-badge" id="topicDisplay">주제: 로딩중</span>
+            <div class="timer-box" id="timer">⏱️ 10</div>
+        </div>
+
+        <div class="turn-info" id="turnDisplay">1번째 턴 (플레이어 1)</div>
+
+        <div class="canvas-container">
+            <canvas id="paintCanvas" width="400" height="320"></canvas>
+            <div class="overlay" id="turnOverlay" style="display:none;"></div>
+        </div>
+
+        <!-- PLAVE 멤버 상징 팔레트 -->
+        <div class="palette">
+            <div class="color-dot active" style="background:#000000;" onclick="setColor('#000000', this)"></div>
+            <div class="color-dot" style="background:var(--yejun);" title="예준 파랑" onclick="setColor('#3B82F6', this)"></div>
+            <div class="color-dot" style="background:var(--noah);" title="노아 보라" onclick="setColor('#A855F7', this)"></div>
+            <div class="color-dot" style="background:var(--bambi);" title="밤비 분홍" onclick="setColor('#EC4899', this)"></div>
+            <div class="color-dot" style="background:var(--eunho);" title="은호 빨강" onclick="setColor('#EF4444', this)"></div>
+            <div class="color-dot" style="background:var(--hamin);" title="하민 초록" onclick="setColor('#10B981', this)"></div>
+            <div class="color-dot" style="background:#F59E0B;" onclick="setColor('#F59E0B', this)"></div>
+        </div>
+
+        <div class="tools">
+            <button class="btn-tool" onclick="setEraser()">🧹 지우개</button>
+            <button class="btn-tool" onclick="undo()">↩️ 되돌리기</button>
+            <button class="btn-tool" onclick="clearCanvas()">🗑️ 전체 지우기</button>
+        </div>
+    </div>
+
+    <!-- 3. 결과 화면 -->
+    <div class="card" id="resultScreen">
+        <h1>🎉 작품 완성!</h1>
+        <div class="sub" id="resultTopic"></div>
+        <div style="text-align:center; margin: 15px 0;">
+            <img id="resultImage" style="width:100%; border-radius:16px; border:3px solid #DDD6FE;">
+        </div>
+        <button class="btn-main" onclick="downloadImage()">💾 이미지 저장하기</button>
+        <button class="btn-tool" style="width:100%; margin-top:8px; padding:12px;" onclick="location.reload()">🔄 다시 하기</button>
     </div>
 
     <script>
+        const topics = ["예준이의 하트", "노아의 쌩얼 아이돌 모드", "밤비의 핑크 덤벨", "은호의 레드 랩 폭발", "하민이의 은하수 댄스", "칼리고 디제잉", "아스테룸 유성우", "웨이팅 포 유 멤버들"];
+        let totalPlayers = 4, currentTurn = 1, timeLeft = 10, timerInterval = null;
+        let isDrawing = false, color = "#000000", lineWidth = 4;
+        let history = [];
+
+        const canvas = document.getElementById('paintCanvas');
+        const ctx = canvas.getContext('2d');
+
         function startGame() {
-            const count = document.getElementById('playerCount').value;
-            alert(`${count}인 플레이 모드로 릴레이 방을 준비합니다!`);
+            totalPlayers = parseInt(document.getElementById('playerCount').value);
+            document.getElementById('setupScreen').style.display = 'none';
+            document.getElementById('gameScreen').style.display = 'block';
+            
+            const randomTopic = topics[Math.floor(Math.random() * topics.length)];
+            document.getElementById('topicDisplay').innerText = `주제: ${randomTopic}`;
+            document.getElementById('resultTopic').innerText = `주제: ${randomTopic}`;
+
+            initCanvas();
+            startTurn();
+        }
+
+        function initCanvas() {
+            ctx.fillStyle = "#FFFFFF";
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            saveHistory();
+        }
+
+        function startTurn() {
+            if (currentTurn > totalPlayers) {
+                endGame();
+                return;
+            }
+
+            document.getElementById('turnDisplay').innerText = `${currentTurn}번째 턴 / 총 ${totalPlayers}명`;
+            timeLeft = 10;
+            updateTimerDisplay();
+
+            timerInterval = setInterval(() => {
+                timeLeft--;
+                updateTimerDisplay();
+                if (timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    nextTurn();
+                }
+            }, 1000);
+        }
+
+        function updateTimerDisplay() {
+            const timerEl = document.getElementById('timer');
+            timerEl.innerText = `⏱️ ${timeLeft}`;
+            if (timeLeft <= 3) {
+                timerEl.classList.add('timer-warning');
+                playBeep();
+            } else {
+                timerEl.classList.remove('timer-warning');
+            }
+        }
+
+        function nextTurn() {
+            currentTurn++;
+            if (currentTurn <= totalPlayers) {
+                const overlay = document.getElementById('turnOverlay');
+                overlay.innerText = `NEXT 턴 준비! (${currentTurn}번째 플레이어)`;
+                overlay.style.display = 'flex';
+                setTimeout(() => {
+                    overlay.style.display = 'none';
+                    startTurn();
+                }, 1500);
+            } else {
+                endGame();
+            }
+        }
+
+        function endGame() {
+            document.getElementById('gameScreen').style.display = 'none';
+            document.getElementById('resultScreen').style.display = 'block';
+            document.getElementById('resultImage').src = canvas.toDataURL();
+        }
+
+        /* 그림판 기능 (터치 & 마우스 지원) */
+        function getPos(e) {
+            const rect = canvas.getBoundingClientRect();
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            return { x: (clientX - rect.left) * (canvas.width / rect.width), y: (clientY - rect.top) * (canvas.height / rect.height) };
+        }
+
+        function startDrawing(e) { isDrawing = true; draw(e); }
+        function stopDrawing() { if(isDrawing) { isDrawing = false; ctx.beginPath(); saveHistory(); } }
+        function draw(e) {
+            if (!isDrawing) return;
+            const pos = getPos(e);
+            ctx.lineWidth = lineWidth;
+            ctx.lineCap = 'round';
+            ctx.strokeStyle = color;
+            ctx.lineTo(pos.x, pos.y);
+            ctx.stroke();
+            ctx.beginPath();
+            ctx.moveTo(pos.x, pos.y);
+        }
+
+        canvas.addEventListener('mousedown', startDrawing);
+        canvas.addEventListener('mousemove', draw);
+        canvas.addEventListener('mouseup', stopDrawing);
+        canvas.addEventListener('touchstart', (e) => { startDrawing(e); e.preventDefault(); });
+        canvas.addEventListener('touchmove', (e) => { draw(e); e.preventDefault(); });
+        canvas.addEventListener('touchend', stopDrawing);
+
+        function setColor(c, el) {
+            color = c;
+            document.querySelectorAll('.color-dot').forEach(d => d.classList.remove('active'));
+            if(el) el.classList.add('active');
+        }
+        function setEraser() { color = "#FFFFFF"; }
+        function clearCanvas() { ctx.fillRect(0, 0, canvas.width, canvas.height); saveHistory(); }
+        function saveHistory() { history.push(ctx.getImageData(0, 0, canvas.width, canvas.height)); }
+        function undo() {
+            if (history.length > 1) {
+                history.pop();
+                ctx.putImageData(history[history.length - 1], 0, 0);
+            }
+        }
+
+        function playBeep() {
+            try {
+                const ctxAudio = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = ctxAudio.createOscillator();
+                osc.connect(ctxAudio.destination);
+                osc.frequency.value = 600;
+                osc.start();
+                osc.stop(ctxAudio.currentTime + 0.1);
+            } catch(e){}
+        }
+
+        function downloadImage() {
+            const a = document.createElement('a');
+            a.href = canvas.toDataURL();
+            a.download = 'PLAVE_Relay_Drawing.png';
+            a.click();
         }
     </script>
 </body>
