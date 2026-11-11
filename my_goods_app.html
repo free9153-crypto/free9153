@@ -1,38 +1,988 @@
-[
-  {
-    "id": 1,
-    "name": "PLAVE 1st Mini Album A ver.",
-    "member": "단체",
-    "category": "앨범",
-    "type": "buy",
-    "price": 17800,
-    "qty": 2,
-    "date": "2026-03-10",
-    "photo": "",
-    "note": ""
-  },
-  {
-    "id": 2,
-    "name": "밤비 10cm 솜인형",
-    "member": "밤비",
-    "category": "인형",
-    "type": "buy",
-    "price": 22000,
-    "qty": 1,
-    "date": "2026-04-15",
-    "photo": "",
-    "note": ""
-  },
-  {
-    "id": 3,
-    "name": "예준 미공포 포토카드",
-    "member": "예준",
-    "category": "포카",
-    "type": "buy",
-    "price": 15000,
-    "qty": 1,
-    "date": "2026-05-01",
-    "photo": "",
-    "note": ""
-  }
-]
+```html
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>마이굿즈 - PLAVE Goods Collector</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome CDN -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Chart.js CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        plave: {
+                            50: '#f5f3ff',
+                            100: '#ede9fe',
+                            200: '#ddd6fe',
+                            300: '#c4b5fd',
+                            400: '#a78bfa',
+                            500: '#8b5cf6',
+                            600: '#7c3aed',
+                            700: '#6d28d9',
+                            800: '#5b21b6',
+                            900: '#4c1d95',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Custom scrollbar & iPhone safe area optimization */
+        body {
+            -webkit-tap-highlight-color: transparent;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        /* Touch friendly bottom navigation safe area */
+        .pb-safe {
+            padding-bottom: env(safe-area-inset-bottom, 1rem);
+        }
+    </style>
+</head>
+<body class="bg-slate-900 text-slate-100 min-h-screen pb-24 md:pb-6">
+
+    <!-- Top Header -->
+    <header class="sticky top-0 z-30 bg-slate-900/90 backdrop-blur border-b border-purple-900/40 px-4 py-3 flex justify-between items-center max-w-md mx-auto md:max-w-4xl">
+        <div class="flex items-center gap-2">
+            <span class="text-2xl">💜</span>
+            <div>
+                <h1 class="font-bold text-lg leading-tight bg-gradient-to-r from-purple-400 to-pink-300 bg-clip-text text-transparent">마이굿즈</h1>
+                <p class="text-xs text-purple-300/70">PLAVE Merch Collector</p>
+            </div>
+        </div>
+        <button onclick="openModal()" class="bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white px-3.5 py-1.5 rounded-full text-xs font-semibold shadow-lg shadow-purple-900/50 flex items-center gap-1.5 transition active:scale-95">
+            <i class="fa-solid fa-plus"></i> 굿즈 등록
+        </button>
+    </header>
+
+    <!-- Main Container (Mobile First Container) -->
+    <main class="max-w-md mx-auto md:max-w-4xl px-4 pt-4 space-y-4">
+
+        <!-- Quick Summary Cards -->
+        <section class="grid grid-cols-3 gap-2">
+            <div class="bg-slate-800/80 border border-purple-900/30 rounded-2xl p-3 text-center shadow-md">
+                <span class="text-[10px] text-slate-400 block font-medium">총 구매액</span>
+                <span id="kpi-total-buy" class="text-sm font-bold text-purple-300">0원</span>
+            </div>
+            <div class="bg-slate-800/80 border border-purple-900/30 rounded-2xl p-3 text-center shadow-md">
+                <span class="text-[10px] text-slate-400 block font-medium">총 판매액</span>
+                <span id="kpi-total-sell" class="text-sm font-bold text-emerald-400">0원</span>
+            </div>
+            <div class="bg-slate-800/80 border border-purple-900/30 rounded-2xl p-3 text-center shadow-md">
+                <span class="text-[10px] text-slate-400 block font-medium">순 지출</span>
+                <span id="kpi-net-cost" class="text-sm font-bold text-pink-400">0원</span>
+            </div>
+        </section>
+
+        <!-- VIEW 1: MY GOODS LIST -->
+        <div id="view-goods" class="view-section space-y-3">
+            <!-- Filter Bar: Member -->
+            <div>
+                <label class="text-xs text-purple-300/80 font-semibold mb-1.5 block flex justify-between items-center">
+                    <span>멤버 필터</span>
+                    <span id="member-goods-count" class="text-[11px] text-slate-400">전체 0개</span>
+                </label>
+                <div class="flex gap-1.5 overflow-x-auto hide-scrollbar py-1" id="member-filter-group">
+                    <!-- Dynamic Buttons -->
+                </div>
+            </div>
+
+            <!-- Filter Bar: Category & Search -->
+            <div class="flex gap-2 items-center">
+                <div class="flex-1 overflow-x-auto hide-scrollbar flex gap-1.5" id="category-filter-group">
+                    <!-- Dynamic Category Chips -->
+                </div>
+                <button onclick="promptAddCategory()" class="bg-slate-800 hover:bg-slate-700 text-purple-300 border border-purple-500/30 px-2.5 py-1 rounded-xl text-xs font-medium whitespace-nowrap flex items-center gap-1 transition">
+                    <i class="fa-solid fa-folder-plus"></i> +분류
+                </button>
+            </div>
+
+            <!-- Merch Card Grid -->
+            <div id="goods-grid" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 pt-1">
+                <!-- Rendered dynamically -->
+            </div>
+            
+            <div id="goods-empty" class="hidden text-center py-12 text-slate-500 space-y-2">
+                <i class="fa-solid fa-box-open text-4xl text-purple-900/60"></i>
+                <p class="text-sm">등록된 굿즈가 없습니다.<br>오른쪽 위 상단에서 굿즈를 추가해보세요!</p>
+            </div>
+        </div>
+
+        <!-- VIEW 2: CALENDAR VIEW -->
+        <div id="view-calendar" class="view-section hidden space-y-3">
+            <div class="bg-slate-800/80 border border-purple-900/40 rounded-2xl p-4 shadow-lg">
+                <div class="flex justify-between items-center mb-4">
+                    <button id="cal-prev" class="w-8 h-8 rounded-full bg-slate-700 text-purple-300 flex items-center justify-center hover:bg-slate-600 transition"><i class="fa-solid fa-chevron-left text-xs"></i></button>
+                    <h2 id="cal-month-title" class="font-bold text-base text-purple-200">2026년 11월</h2>
+                    <button id="cal-next" class="w-8 h-8 rounded-full bg-slate-700 text-purple-300 flex items-center justify-center hover:bg-slate-600 transition"><i class="fa-solid fa-chevron-right text-xs"></i></button>
+                </div>
+                <!-- Calendar Header -->
+                <div class="grid grid-cols-7 text-center text-xs font-semibold text-purple-300/60 mb-2">
+                    <span class="text-rose-400">일</span><span>월</span><span>화</span><span>수</span><span>목</span><span>금</span><span class="text-indigo-400">토</span>
+                </div>
+                <!-- Calendar Days Grid -->
+                <div id="calendar-days" class="grid grid-cols-7 gap-1 text-xs">
+                    <!-- Days dynamically rendered -->
+                </div>
+            </div>
+
+            <!-- Selected Date Transactions -->
+            <div class="bg-slate-800/50 border border-purple-900/30 rounded-2xl p-3.5">
+                <h3 class="text-xs font-bold text-purple-300 mb-2 flex items-center gap-1.5">
+                    <i class="fa-regular fa-calendar-check"></i> <span id="selected-date-label">날짜를 선택하세요</span>
+                </h3>
+                <div id="selected-date-list" class="space-y-2 text-xs">
+                    <p class="text-slate-500 text-center py-3">해당 날짜에 등록된 거래 내역이 없습니다.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- VIEW 3: STATS VIEW -->
+        <div id="view-stats" class="view-section hidden space-y-4">
+            <div class="bg-slate-800/80 border border-purple-900/40 rounded-2xl p-4 shadow-lg">
+                <h3 class="text-sm font-bold text-purple-200 mb-3 flex items-center gap-2">
+                    <i class="fa-solid fa-chart-pie text-purple-400"></i> 멤버별 총 지출 비율
+                </h3>
+                <div class="h-52 relative flex justify-center items-center">
+                    <canvas id="memberSpendChart"></canvas>
+                </div>
+            </div>
+
+            <div class="bg-slate-800/80 border border-purple-900/40 rounded-2xl p-4 shadow-lg">
+                <h3 class="text-sm font-bold text-purple-200 mb-2 flex items-center gap-2">
+                    <i class="fa-solid fa-list-ol text-purple-400"></i> 멤버별 지출 상세
+                </h3>
+                <div id="member-stats-list" class="space-y-2 text-xs">
+                    <!-- Rendered dynamically -->
+                </div>
+            </div>
+        </div>
+
+        <!-- VIEW 4: BACKUP & SETTINGS VIEW -->
+        <div id="view-backup" class="view-section hidden space-y-4">
+            <div class="bg-slate-800/80 border border-purple-900/40 rounded-2xl p-4 shadow-lg space-y-3">
+                <h3 class="text-sm font-bold text-purple-200 flex items-center gap-2">
+                    <i class="fa-solid fa-database text-purple-400"></i> 데이터 백업 및 복원
+                </h3>
+                <p class="text-xs text-slate-400 leading-relaxed">
+                    저장된 모든 굿즈 내역 및 사진 데이터를 JSON 파일로 안전하게 백업하거나 다른 기기로 복원할 수 있습니다.
+                </p>
+                <div class="pt-2 space-y-2">
+                    <button onclick="exportData()" class="w-full bg-purple-700 hover:bg-purple-600 text-white py-2.5 rounded-xl font-medium text-xs flex items-center justify-center gap-2 transition shadow">
+                        <i class="fa-solid fa-download"></i> 데이터 백업 파일 다운로드 (.json)
+                    </button>
+                    <label class="w-full bg-slate-700 hover:bg-slate-600 text-purple-200 py-2.5 rounded-xl font-medium text-xs flex items-center justify-center gap-2 transition shadow cursor-pointer">
+                        <i class="fa-solid fa-upload"></i> 데이터 복원 (파일 선택)
+                        <input type="file" id="import-file" accept=".json" class="hidden" onchange="importData(event)">
+                    </label>
+                </div>
+            </div>
+
+            <div class="bg-slate-800/80 border border-purple-900/40 rounded-2xl p-4 shadow-lg space-y-3">
+                <h3 class="text-sm font-bold text-purple-200 flex items-center gap-2">
+                    <i class="fa-solid fa-tags text-purple-400"></i> 커스텀 카테고리 관리
+                </h3>
+                <div id="custom-category-tags" class="flex flex-wrap gap-1.5 text-xs">
+                    <!-- Dynamic chips -->
+                </div>
+            </div>
+
+            <div class="bg-slate-800/40 border border-rose-900/30 rounded-2xl p-4 text-center">
+                <button onclick="clearAllData()" class="text-xs text-rose-400 hover:text-rose-300 underline">
+                    초기화: 모든 데이터 삭제하기
+                </button>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Bottom Navigation Bar (Mobile Native feel) -->
+    <nav class="fixed bottom-0 left-0 right-0 bg-slate-900/95 border-t border-purple-900/40 backdrop-blur z-30 pb-safe">
+        <div class="max-w-md mx-auto md:max-w-4xl grid grid-cols-4 text-center py-2 text-slate-400">
+            <button onclick="switchTab('goods')" id="tab-goods" class="nav-tab text-purple-400 flex flex-col items-center gap-0.5">
+                <i class="fa-solid fa-heart text-base"></i>
+                <span class="text-[10px] font-medium">내 굿즈</span>
+            </button>
+            <button onclick="switchTab('calendar')" id="tab-calendar" class="nav-tab flex flex-col items-center gap-0.5">
+                <i class="fa-solid fa-calendar-days text-base"></i>
+                <span class="text-[10px] font-medium">거래 달력</span>
+            </button>
+            <button onclick="switchTab('stats')" id="tab-stats" class="nav-tab flex flex-col items-center gap-0.5">
+                <i class="fa-solid fa-chart-simple text-base"></i>
+                <span class="text-[10px] font-medium">통계</span>
+            </button>
+            <button onclick="switchTab('backup')" id="tab-backup" class="nav-tab flex flex-col items-center gap-0.5">
+                <i class="fa-solid fa-gear text-base"></i>
+                <span class="text-[10px] font-medium">백업/설정</span>
+            </button>
+        </div>
+    </nav>
+
+    <!-- Modal Form (Add / Edit Merch) -->
+    <div id="goods-modal" class="fixed inset-0 bg-black/70 z-50 hidden flex items-center justify-center p-4 backdrop-blur-sm overflow-y-auto">
+        <div class="bg-slate-800 border border-purple-900/60 rounded-3xl w-full max-w-md p-5 text-slate-100 shadow-2xl space-y-4 my-auto">
+            <div class="flex justify-between items-center border-b border-slate-700/60 pb-3">
+                <h3 id="modal-title" class="font-bold text-purple-200 text-base">새 굿즈 등록</h3>
+                <button onclick="closeModal()" class="text-slate-400 hover:text-slate-200 text-lg p-1">&times;</button>
+            </div>
+
+            <form id="goods-form" onsubmit="handleFormSubmit(event)" class="space-y-3 text-xs">
+                <input type="hidden" id="form-id">
+
+                <!-- Image Uploader -->
+                <div>
+                    <label class="block text-slate-300 mb-1 font-medium">굿즈 사진</label>
+                    <div class="flex items-center gap-3">
+                        <div id="image-preview-container" class="w-16 h-16 rounded-xl bg-slate-700/60 border border-slate-600 flex items-center justify-center overflow-hidden text-slate-400 relative">
+                            <i class="fa-solid fa-camera text-xl" id="image-placeholder-icon"></i>
+                            <img id="image-preview" class="w-full h-full object-cover hidden" alt="미리보기">
+                        </div>
+                        <div class="flex-1 space-y-1">
+                            <input type="file" id="form-image" accept="image/*" class="hidden" onchange="previewImage(event)">
+                            <button type="button" onclick="document.getElementById('form-image').click()" class="bg-purple-900/50 border border-purple-500/40 text-purple-200 px-3 py-1.5 rounded-lg text-xs hover:bg-purple-800/50 transition">
+                                <i class="fa-solid fa-upload mr-1"></i> 사진 선택 / 촬영
+                            </button>
+                            <p class="text-[10px] text-slate-400">기기 내 사진을 바로 등록할 수 있습니다.</p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Goods Name -->
+                <div>
+                    <label class="block text-slate-300 mb-1 font-medium">굿즈명 <span class="text-rose-400">*</span></label>
+                    <input type="text" id="form-name" required placeholder="예: 6번째 여름 포토카드, 앙콘 아크릴 스탠드" class="w-full bg-slate-900/80 border border-purple-900/50 rounded-xl p-2.5 text-slate-100 placeholder-slate-500 focus:outline-none focus:border-purple-500">
+                </div>
+
+                <!-- Member & Category Grid -->
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="block text-slate-300 mb-1 font-medium">멤버 선택</label>
+                        <select id="form-member" class="w-full bg-slate-900/80 border border-purple-900/50 rounded-xl p-2.5 text-slate-100 focus:outline-none focus:border-purple-500">
+                            <!-- Populated in JS -->
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-slate-300 mb-1 font-medium">품목 분류</label>
+                        <select id="form-category" class="w-full bg-slate-900/80 border border-purple-900/50 rounded-xl p-2.5 text-slate-100 focus:outline-none focus:border-purple-500">
+                            <!-- Populated in JS -->
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Transaction Type & Date -->
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="block text-slate-300 mb-1 font-medium">거래 구분</label>
+                        <select id="form-type" class="w-full bg-slate-900/80 border border-purple-900/50 rounded-xl p-2.5 text-slate-100 focus:outline-none focus:border-purple-500">
+                            <option value="buy">구매 🛍️</option>
+                            <option value="sell">판매 💰</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-slate-300 mb-1 font-medium">거래일자</label>
+                        <input type="date" id="form-date" required class="w-full bg-slate-900/80 border border-purple-900/50 rounded-xl p-2.5 text-slate-100 focus:outline-none focus:border-purple-500">
+                    </div>
+                </div>
+
+                <!-- Price & Quantity -->
+                <div class="grid grid-cols-2 gap-2">
+                    <div>
+                        <label class="block text-slate-300 mb-1 font-medium">단가 (원)</label>
+                        <input type="number" id="form-price" min="0" placeholder="0" required class="w-full bg-slate-900/80 border border-purple-900/50 rounded-xl p-2.5 text-slate-100 focus:outline-none focus:border-purple-500">
+                    </div>
+                    <div>
+                        <label class="block text-slate-300 mb-1 font-medium">수량 (개)</label>
+                        <input type="number" id="form-qty" min="1" value="1" required class="w-full bg-slate-900/80 border border-purple-900/50 rounded-xl p-2.5 text-slate-100 focus:outline-none focus:border-purple-500">
+                    </div>
+                </div>
+
+                <!-- Note -->
+                <div>
+                    <label class="block text-slate-300 mb-1 font-medium">메모 (선택)</label>
+                    <input type="text" id="form-note" placeholder="구매처, 상태, 분양 메모 등" class="w-full bg-slate-900/80 border border-purple-900/50 rounded-xl p-2.5 text-slate-100 placeholder-slate-500 focus:outline-none focus:border-purple-500">
+                </div>
+
+                <!-- Form Action Buttons -->
+                <div class="flex gap-2 pt-2">
+                    <button type="button" onclick="closeModal()" class="flex-1 bg-slate-700 hover:bg-slate-600 py-2.5 rounded-xl font-medium text-slate-300 transition">취소</button>
+                    <button type="submit" class="flex-1 bg-purple-600 hover:bg-purple-500 py-2.5 rounded-xl font-medium text-white transition shadow-lg shadow-purple-900/40">저장하기</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Details View Modal -->
+    <div id="detail-modal" class="fixed inset-0 bg-black/75 z-50 hidden flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-slate-800 border border-purple-900/60 rounded-3xl w-full max-w-sm p-5 text-slate-100 shadow-2xl space-y-4 relative">
+            <button onclick="closeDetailModal()" class="absolute top-3 right-3 text-slate-400 hover:text-slate-200 text-lg w-8 h-8 rounded-full bg-slate-700/50 flex items-center justify-center">&times;</button>
+            <div id="detail-content" class="space-y-3">
+                <!-- Dynamically filled -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Application Logic Script -->
+    <script>
+        // Default PLAVE Member configuration with official colors
+        const MEMBERS = ['전체', '예준', '노아', '밤비', '은호', '하민', '단체'];
+        const MEMBER_COLORS = {
+            '예준': '#3b82f6', // Blue
+            '노아': '#a855f7', // Purple
+            '밤비': '#ec4899', // Pink
+            '은호': '#ef4444', // Red
+            '하민': '#22c55e', // Green
+            '단체': '#eab308'  // Yellow
+        };
+
+        // State Management
+        let appData = {
+            goods: [],
+            categories: ['앨범', '인형', '포카', '응원봉/아크릴', '기타']
+        };
+
+        let currentMemberFilter = '전체';
+        let currentCategoryFilter = '전체';
+        let currentCalendarDate = new Date();
+        let selectedCalendarDateStr = getFormattedDate(new Date());
+        let memberChartInstance = null;
+        let tempBase64Image = '';
+
+        // Initializer
+        window.addEventListener('DOMContentLoaded', () => {
+            loadFromLocalStorage();
+            initFilters();
+            renderAll();
+            // Set today in form
+            document.getElementById('form-date').value = getFormattedDate(new Date());
+        });
+
+        // Local Storage Sync
+        function loadFromLocalStorage() {
+            const saved = localStorage.getItem('my_plave_goods_data');
+            if (saved) {
+                try {
+                    const parsed = JSON.parse(saved);
+                    appData.goods = parsed.goods || [];
+                    if (parsed.categories && Array.isArray(parsed.categories)) {
+                        appData.categories = Array.from(new Set([...appData.categories, ...parsed.categories]));
+                    }
+                } catch (e) {
+                    console.error("Failed to parse local storage data", e);
+                }
+            } else {
+                // Initial sample data if completely empty
+                appData.goods = [
+                    {
+                        id: 'sample-1',
+                        name: 'ASTERUM 134-1 미니앨범',
+                        member: '단체',
+                        category: '앨범',
+                        type: 'buy',
+                        price: 17800,
+                        qty: 1,
+                        date: getFormattedDate(new Date()),
+                        photo: '',
+                        note: '초판 한정 포카 포함'
+                    },
+                    {
+                        id: 'sample-2',
+                        name: '예준 공식 인형 (야옹이)',
+                        member: '예준',
+                        category: '인형',
+                        type: 'buy',
+                        price: 25000,
+                        qty: 1,
+                        date: getFormattedDate(new Date()),
+                        photo: '',
+                        note: '미개봉 신품'
+                    }
+                ];
+                saveToLocalStorage();
+            }
+        }
+
+        function saveToLocalStorage() {
+            localStorage.setItem('my_plave_goods_data', JSON.stringify(appData));
+        }
+
+        // Filter Controls setup
+        function initFilters() {
+            // Member Filter Tabs
+            const memberGroup = document.getElementById('member-filter-group');
+            memberGroup.innerHTML = MEMBERS.map(mem => `
+                <button onclick="setMemberFilter('${mem}')" class="member-btn px-3 py-1 rounded-full text-xs font-medium whitespace-nowrap transition ${currentMemberFilter === mem ? 'bg-purple-600 text-white shadow-md' : 'bg-slate-800 text-slate-300 hover:bg-slate-700'}">
+                    ${mem}
+                </button>
+            `).join('');
+
+            // Category Select & Filter Group
+            updateCategoryFilters();
+
+            // Populate Form Member Select
+            const formMemberSelect = document.getElementById('form-member');
+            formMemberSelect.innerHTML = MEMBERS.filter(m => m !== '전체').map(m => `<option value="${m}">${m}</option>`).join('');
+        }
+
+        function updateCategoryFilters() {
+            const catGroup = document.getElementById('category-filter-group');
+            const allCats = ['전체', ...appData.categories];
+            
+            catGroup.innerHTML = allCats.map(cat => `
+                <button onclick="setCategoryFilter('${cat}')" class="px-2.5 py-1 rounded-xl text-xs font-medium whitespace-nowrap transition ${currentCategoryFilter === cat ? 'bg-purple-900/80 text-purple-200 border border-purple-400/50' : 'bg-slate-800/80 text-slate-400 hover:text-slate-200 border border-slate-700/50'}">
+                    ${cat}
+                </button>
+            `).join('');
+
+            // Form category select
+            const formCatSelect = document.getElementById('form-category');
+            formCatSelect.innerHTML = appData.categories.map(c => `<option value="${c}">${c}</option>`).join('');
+
+            // Render tags in Backup view
+            renderCustomCategoryTags();
+        }
+
+        function renderCustomCategoryTags() {
+            const container = document.getElementById('custom-category-tags');
+            container.innerHTML = appData.categories.map(c => `
+                <span class="bg-slate-700 text-purple-200 px-2.5 py-1 rounded-lg flex items-center gap-1.5">
+                    ${c}
+                    <i class="fa-solid fa-xmark text-[10px] cursor-pointer hover:text-rose-400" onclick="removeCategory('${c}')"></i>
+                </span>
+            `).join('');
+        }
+
+        function promptAddCategory() {
+            const newCat = prompt("추가할 카테고리 이름을 입력하세요:");
+            if (newCat && newCat.trim() !== "") {
+                const trimmed = newCat.trim();
+                if (!appData.categories.includes(trimmed)) {
+                    appData.categories.push(trimmed);
+                    saveToLocalStorage();
+                    updateCategoryFilters();
+                    setCategoryFilter(trimmed);
+                }
+            }
+        }
+
+        function removeCategory(catName) {
+            if (confirm(`'${catName}' 카테고리를 삭제하시겠습니까?`)) {
+                appData.categories = appData.categories.filter(c => c !== catName);
+                if (currentCategoryFilter === catName) currentCategoryFilter = '전체';
+                saveToLocalStorage();
+                updateCategoryFilters();
+                renderAll();
+            }
+        }
+
+        function setMemberFilter(mem) {
+            currentMemberFilter = mem;
+            initFilters();
+            renderGoodsGrid();
+        }
+
+        function setCategoryFilter(cat) {
+            currentCategoryFilter = cat;
+            updateCategoryFilters();
+            renderGoodsGrid();
+        }
+
+        // Master Render Function
+        function renderAll() {
+            calculateKPIs();
+            renderGoodsGrid();
+            renderCalendar();
+            renderStats();
+        }
+
+        // KPI Metrics
+        function calculateKPIs() {
+            let buyTotal = 0;
+            let sellTotal = 0;
+
+            appData.goods.forEach(item => {
+                const amount = (Number(item.price) || 0) * (Number(item.qty) || 1);
+                if (item.type === 'buy') {
+                    buyTotal += amount;
+                } else if (item.type === 'sell') {
+                    sellTotal += amount;
+                }
+            });
+
+            const netCost = buyTotal - sellTotal;
+
+            document.getElementById('kpi-total-buy').textContent = buyTotal.toLocaleString() + '원';
+            document.getElementById('kpi-total-sell').textContent = sellTotal.toLocaleString() + '원';
+            document.getElementById('kpi-net-cost').textContent = netCost.toLocaleString() + '원';
+        }
+
+        // Render Merch Grid View
+        function renderGoodsGrid() {
+            const grid = document.getElementById('goods-grid');
+            const emptyState = document.getElementById('goods-empty');
+            
+            const filtered = appData.goods.filter(item => {
+                const matchMem = (currentMemberFilter === '전체' || item.member === currentMemberFilter);
+                const matchCat = (currentCategoryFilter === '전체' || item.category === currentCategoryFilter);
+                return matchMem && matchCat;
+            });
+
+            document.getElementById('member-goods-count').textContent = `전체 ${filtered.length}개`;
+
+            if (filtered.length === 0) {
+                grid.innerHTML = '';
+                emptyState.classList.remove('hidden');
+                return;
+            }
+
+            emptyState.classList.add('hidden');
+            grid.innerHTML = filtered.map(item => {
+                const totalPrice = (Number(item.price) || 0) * (Number(item.qty) || 1);
+                const memColor = MEMBER_COLORS[item.member] || '#8b5cf6';
+
+                return `
+                    <div onclick="openDetailModal('${item.id}')" class="bg-slate-800/80 border border-purple-900/30 rounded-2xl overflow-hidden shadow-md flex flex-col cursor-pointer hover:border-purple-500/50 transition">
+                        <!-- Image Container -->
+                        <div class="h-32 bg-slate-900/60 relative flex items-center justify-center overflow-hidden">
+                            ${item.photo ? 
+                                `<img src="${item.photo}" class="w-full h-full object-cover" alt="${item.name}">` : 
+                                `<i class="fa-solid fa-gift text-3xl text-purple-900/50"></i>`
+                            }
+                            <span class="absolute top-2 left-2 text-[10px] font-bold px-2 py-0.5 rounded-full text-white shadow" style="background-color: ${memColor};">
+                                ${item.member}
+                            </span>
+                            <span class="absolute top-2 right-2 text-[10px] px-1.5 py-0.5 rounded-md font-semibold ${item.type === 'buy' ? 'bg-rose-900/80 text-rose-200' : 'bg-emerald-900/80 text-emerald-200'}">
+                                ${item.type === 'buy' ? '구매' : '판매'}
+                            </span>
+                        </div>
+                        <!-- Details -->
+                        <div class="p-2.5 flex-1 flex flex-col justify-between space-y-1">
+                            <div>
+                                <span class="text-[10px] text-purple-300/70 font-medium">${item.category}</span>
+                                <h4 class="font-bold text-xs text-slate-100 line-clamp-1">${item.name}</h4>
+                            </div>
+                            <div class="flex justify-between items-end pt-1 border-t border-slate-700/40">
+                                <span class="text-[10px] text-slate-400">${item.qty}개</span>
+                                <span class="font-extrabold text-xs text-purple-200">${totalPrice.toLocaleString()}원</span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Render Calendar
+        function renderCalendar() {
+            const year = currentCalendarDate.getFullYear();
+            const month = currentCalendarDate.getMonth();
+
+            document.getElementById('cal-month-title').textContent = `${year}년 ${month + 1}월`;
+
+            const firstDay = new Date(year, month, 1).getDay();
+            const lastDate = new Date(year, month + 1, 0).getDate();
+
+            const container = document.getElementById('calendar-days');
+            container.innerHTML = '';
+
+            // Empty cells before first day
+            for (let i = 0; i < firstDay; i++) {
+                container.innerHTML += `<div class="h-10 rounded-xl"></div>`;
+            }
+
+            // Date map for events
+            const eventsMap = {};
+            appData.goods.forEach(item => {
+                if (!eventsMap[item.date]) eventsMap[item.date] = { buy: false, sell: false };
+                if (item.type === 'buy') eventsMap[item.date].buy = true;
+                if (item.type === 'sell') eventsMap[item.date].sell = true;
+            });
+
+            for (let day = 1; day <= lastDate; day++) {
+                const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                const hasEvent = eventsMap[dateStr];
+                const isSelected = dateStr === selectedCalendarDateStr;
+
+                container.innerHTML += `
+                    <div onclick="selectCalendarDate('${dateStr}')" class="h-10 rounded-xl border ${isSelected ? 'border-purple-400 bg-purple-900/40' : 'border-slate-700/30 bg-slate-800/40'} flex flex-col items-center justify-between p-1 cursor-pointer hover:bg-slate-700/50 transition">
+                        <span class="text-[11px] ${isSelected ? 'font-bold text-purple-200' : 'text-slate-300'}">${day}</span>
+                        <div class="flex gap-0.5 h-1.5 items-center">
+                            ${hasEvent && hasEvent.buy ? `<span class="w-1.5 h-1.5 rounded-full bg-rose-400"></span>` : ''}
+                            ${hasEvent && hasEvent.sell ? `<span class="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>` : ''}
+                        </div>
+                    </div>
+                `;
+            }
+
+            renderSelectedDateList();
+        }
+
+        document.getElementById('cal-prev').onclick = () => {
+            currentCalendarDate.setMonth(currentCalendarDate.getMonth() - 1);
+            renderCalendar();
+        };
+
+        document.getElementById('cal-next').onclick = () => {
+            currentCalendarDate.setMonth(currentCalendarDate.getMonth() + 1);
+            renderCalendar();
+        };
+
+        function selectCalendarDate(dateStr) {
+            selectedCalendarDateStr = dateStr;
+            renderCalendar();
+        }
+
+        function renderSelectedDateList() {
+            document.getElementById('selected-date-label').textContent = `${selectedCalendarDateStr} 거래 내역`;
+            const listContainer = document.getElementById('selected-date-list');
+            
+            const dayItems = appData.goods.filter(item => item.date === selectedCalendarDateStr);
+
+            if (dayItems.length === 0) {
+                listContainer.innerHTML = `<p class="text-slate-500 text-center py-3">해당 날짜에 등록된 거래 내역이 없습니다.</p>`;
+                return;
+            }
+
+            listContainer.innerHTML = dayItems.map(item => {
+                const total = (Number(item.price) || 0) * (Number(item.qty) || 1);
+                return `
+                    <div onclick="openDetailModal('${item.id}')" class="bg-slate-800 p-2.5 rounded-xl border border-purple-900/30 flex justify-between items-center cursor-pointer hover:bg-slate-700/60 transition">
+                        <div class="flex items-center gap-2">
+                            <span class="px-1.5 py-0.5 rounded text-[10px] font-bold text-white" style="background-color: ${MEMBER_COLORS[item.member] || '#8b5cf6'}">${item.member}</span>
+                            <div>
+                                <h5 class="font-semibold text-slate-200 text-xs">${item.name}</h5>
+                                <span class="text-[10px] text-slate-400">${item.category} · ${item.qty}개</span>
+                            </div>
+                        </div>
+                        <div class="text-right">
+                            <span class="block font-extrabold text-xs ${item.type === 'buy' ? 'text-rose-300' : 'text-emerald-300'}">
+                                ${item.type === 'buy' ? '-' : '+'}${total.toLocaleString()}원
+                            </span>
+                            <span class="text-[9px] text-slate-400">${item.type === 'buy' ? '구매' : '판매'}</span>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        // Render Statistics View
+        function renderStats() {
+            const memberSpend = { '예준': 0, '노아': 0, '밤비': 0, '은호': 0, '하민': 0, '단체': 0 };
+            
+            appData.goods.forEach(item => {
+                if (item.type === 'buy') {
+                    const total = (Number(item.price) || 0) * (Number(item.qty) || 1);
+                    if (memberSpend[item.member] !== undefined) {
+                        memberSpend[item.member] += total;
+                    }
+                }
+            });
+
+            // Update List
+            const listContainer = document.getElementById('member-stats-list');
+            const totalSpendSum = Object.values(memberSpend).reduce((a, b) => a + b, 0);
+
+            listContainer.innerHTML = Object.keys(memberSpend).map(mem => {
+                const amount = memberSpend[mem];
+                const pct = totalSpendSum > 0 ? ((amount / totalSpendSum) * 100).toFixed(1) : 0;
+                return `
+                    <div class="space-y-1">
+                        <div class="flex justify-between text-xs">
+                            <span class="flex items-center gap-1.5 font-medium text-slate-300">
+                                <span class="w-2.5 h-2.5 rounded-full" style="background-color: ${MEMBER_COLORS[mem]}"></span>
+                                ${mem}
+                            </span>
+                            <span class="font-bold text-purple-200">${amount.toLocaleString()}원 (${pct}%)</span>
+                        </div>
+                        <div class="w-full h-1.5 bg-slate-700/60 rounded-full overflow-hidden">
+                            <div class="h-full rounded-full" style="width: ${pct}%; background-color: ${MEMBER_COLORS[mem]}"></div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            // Chart.js Doughnut Render
+            const ctx = document.getElementById('memberSpendChart').getContext('2d');
+            
+            if (memberChartInstance) {
+                memberChartInstance.destroy();
+            }
+
+            memberChartInstance = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(memberSpend),
+                    datasets: [{
+                        data: Object.values(memberSpend),
+                        backgroundColor: Object.keys(memberSpend).map(m => MEMBER_COLORS[m]),
+                        borderWidth: 2,
+                        borderColor: '#1e293b'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                            labels: {
+                                color: '#cbd5e1',
+                                font: { size: 11 }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // Tab Switching Logic
+        function switchTab(tabName) {
+            document.querySelectorAll('.view-section').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.nav-tab').forEach(el => el.classList.remove('text-purple-400'));
+
+            document.getElementById(`view-${tabName}`).classList.remove('hidden');
+            document.getElementById(`tab-${tabName}`).classList.add('text-purple-400');
+
+            if (tabName === 'calendar') renderCalendar();
+            if (tabName === 'stats') renderStats();
+        }
+
+        // Modal Form Handlers
+        function openModal(editId = null) {
+            tempBase64Image = '';
+            document.getElementById('goods-form').reset();
+            document.getElementById('form-id').value = '';
+            document.getElementById('image-preview').classList.add('hidden');
+            document.getElementById('image-placeholder-icon').classList.remove('hidden');
+            document.getElementById('form-date').value = getFormattedDate(new Date());
+
+            if (editId) {
+                const item = appData.goods.find(g => g.id === editId);
+                if (item) {
+                    document.getElementById('modal-title').textContent = '굿즈 정보 수정';
+                    document.getElementById('form-id').value = item.id;
+                    document.getElementById('form-name').value = item.name;
+                    document.getElementById('form-member').value = item.member;
+                    document.getElementById('form-category').value = item.category;
+                    document.getElementById('form-type').value = item.type;
+                    document.getElementById('form-date').value = item.date;
+                    document.getElementById('form-price').value = item.price;
+                    document.getElementById('form-qty').value = item.qty;
+                    document.getElementById('form-note').value = item.note || '';
+
+                    if (item.photo) {
+                        tempBase64Image = item.photo;
+                        document.getElementById('image-preview').src = item.photo;
+                        document.getElementById('image-preview').classList.remove('hidden');
+                        document.getElementById('image-placeholder-icon').classList.add('hidden');
+                    }
+                }
+            } else {
+                document.getElementById('modal-title').textContent = '새 굿즈 등록';
+            }
+
+            document.getElementById('goods-modal').classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('goods-modal').classList.add('hidden');
+        }
+
+        // Image Preview & Base64 Compression
+        function previewImage(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                // Compress image via canvas to keep localStorage safe
+                const img = new Image();
+                img.onload = function () {
+                    const canvas = document.createElement('canvas');
+                    const MAX_WIDTH = 400;
+                    const scaleSize = MAX_WIDTH / img.width;
+                    canvas.width = MAX_WIDTH;
+                    canvas.height = img.height * scaleSize;
+
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+                    tempBase64Image = canvas.toDataURL('image/jpeg', 0.7);
+                    
+                    document.getElementById('image-preview').src = tempBase64Image;
+                    document.getElementById('image-preview').classList.remove('hidden');
+                    document.getElementById('image-placeholder-icon').classList.add('hidden');
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function handleFormSubmit(event) {
+            event.preventDefault();
+
+            const id = document.getElementById('form-id').value || 'goods_' + Date.now();
+            const newItem = {
+                id: id,
+                name: document.getElementById('form-name').value,
+                member: document.getElementById('form-member').value,
+                category: document.getElementById('form-category').value,
+                type: document.getElementById('form-type').value,
+                date: document.getElementById('form-date').value,
+                price: Number(document.getElementById('form-price').value),
+                qty: Number(document.getElementById('form-qty').value),
+                note: document.getElementById('form-note').value,
+                photo: tempBase64Image
+            };
+
+            const existingIndex = appData.goods.findIndex(g => g.id === id);
+            if (existingIndex > -1) {
+                appData.goods[existingIndex] = newItem;
+            } else {
+                appData.goods.unshift(newItem);
+            }
+
+            saveToLocalStorage();
+            closeModal();
+            renderAll();
+        }
+
+        // Merch Detail Modal
+        function openDetailModal(id) {
+            const item = appData.goods.find(g => g.id === id);
+            if (!item) return;
+
+            const total = (Number(item.price) || 0) * (Number(item.qty) || 1);
+            const container = document.getElementById('detail-content');
+
+            container.innerHTML = `
+                <div class="h-48 bg-slate-900 rounded-2xl overflow-hidden flex items-center justify-center relative">
+                    ${item.photo ? `<img src="${item.photo}" class="w-full h-full object-cover">` : `<i class="fa-solid fa-gift text-4xl text-purple-900/50"></i>`}
+                    <span class="absolute top-3 left-3 text-xs font-bold px-2.5 py-1 rounded-full text-white shadow" style="background-color: ${MEMBER_COLORS[item.member] || '#8b5cf6'}">
+                        ${item.member}
+                    </span>
+                </div>
+
+                <div class="space-y-2">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <span class="text-xs text-purple-300">${item.category}</span>
+                            <h4 class="font-bold text-base text-slate-100">${item.name}</h4>
+                        </div>
+                        <span class="px-2 py-0.5 rounded text-xs font-semibold ${item.type === 'buy' ? 'bg-rose-900/80 text-rose-200' : 'bg-emerald-900/80 text-emerald-200'}">
+                            ${item.type === 'buy' ? '구매' : '판매'}
+                        </span>
+                    </div>
+
+                    <div class="bg-slate-900/70 rounded-xl p-3 text-xs space-y-1.5 border border-slate-700/50">
+                        <div class="flex justify-between">
+                            <span class="text-slate-400">거래일자</span>
+                            <span class="text-slate-200 font-medium">${item.date}</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span class="text-slate-400">단가 및 수량</span>
+                            <span class="text-slate-200 font-medium">${item.price.toLocaleString()}원 × ${item.qty}개</span>
+                        </div>
+                        <div class="flex justify-between border-t border-slate-800 pt-1.5 font-bold">
+                            <span class="text-slate-300">총 금액</span>
+                            <span class="text-purple-300 text-sm">${total.toLocaleString()}원</span>
+                        </div>
+                    </div>
+
+                    ${item.note ? `
+                        <div class="bg-slate-900/40 rounded-xl p-2.5 text-xs text-slate-300 border border-slate-700/30">
+                            <span class="text-[10px] text-purple-400 font-bold block mb-0.5">메모</span>
+                            ${item.note}
+                        </div>
+                    ` : ''}
+                </div>
+
+                <div class="flex gap-2 pt-2">
+                    <button onclick="closeDetailModal(); deleteGoods('${item.id}');" class="bg-rose-900/40 hover:bg-rose-800/60 text-rose-200 border border-rose-500/30 flex-1 py-2 rounded-xl text-xs font-medium transition">
+                        <i class="fa-solid fa-trash mr-1"></i> 삭제
+                    </button>
+                    <button onclick="closeDetailModal(); openModal('${item.id}');" class="bg-purple-600 hover:bg-purple-500 text-white flex-1 py-2 rounded-xl text-xs font-medium transition shadow">
+                        <i class="fa-solid fa-pen mr-1"></i> 수정
+                    </button>
+                </div>
+            `;
+
+            document.getElementById('detail-modal').classList.remove('hidden');
+        }
+
+        function closeDetailModal() {
+            document.getElementById('detail-modal').classList.add('hidden');
+        }
+
+        function deleteGoods(id) {
+            if (confirm("정말 이 굿즈 내역을 삭제하시겠습니까?")) {
+                appData.goods = appData.goods.filter(g => g.id !== id);
+                saveToLocalStorage();
+                renderAll();
+            }
+        }
+
+        // Backup & Restore (JSON File)
+        function exportData() {
+            const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(appData, null, 2));
+            const downloadAnchor = document.createElement('a');
+            downloadAnchor.setAttribute("href", dataStr);
+            downloadAnchor.setAttribute("download", `PLAVE_MyGoods_Backup_${getFormattedDate(new Date())}.json`);
+            document.body.appendChild(downloadAnchor);
+            downloadAnchor.click();
+            downloadAnchor.remove();
+        }
+
+        function importData(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                try {
+                    const imported = JSON.parse(e.target.result);
+                    if (imported && Array.isArray(imported.goods)) {
+                        appData = imported;
+                        saveToLocalStorage();
+                        initFilters();
+                        renderAll();
+                        alert("데이터가 성공적으로 복원되었습니다!");
+                    } else {
+                        alert("올바르지 않은 백업 파일 형식입니다.");
+                    }
+                } catch (err) {
+                    alert("JSON 파일을 읽는 동안 오류가 발생했습니다.");
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function clearAllData() {
+            if (confirm("주의: 모든 굿즈 및 백업 데이터가 초기화됩니다. 진행하시겠습니까?")) {
+                localStorage.removeItem('my_plave_goods_data');
+                location.reload();
+            }
+        }
+
+        // Utility: Date formatter YYYY-MM-DD
+        function getFormattedDate(date) {
+            const y = date.getFullYear();
+            const m = String(date.getMonth() + 1).padStart(2, '0');
+            const d = String(date.getDate()).padStart(2, '0');
+            return `${y}-${m}-${d}`;
+        }
+    </script>
+</body>
+</html>
+```
