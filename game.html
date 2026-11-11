@@ -46,7 +46,60 @@ canvas{display:block;width:100%;height:auto;background:white;border:2px solid #d
 <h2>🎮 그림 모드 선택</h2>
 <input id="playerName" placeholder="닉네임" maxlength="12">
 <div class="modeButtons">
-<button onclick="startSolo()">🎨 혼자 그리기 (20초)</button>
+<button onclick="
+async function createRoom(){
+  try {
+    const code = makeCode();
+    const ref = db.ref("rooms/" + code);
+
+    const room = {
+      host: playerId,
+      players: {
+        [playerId]: {
+          name: playerName(),
+          joinedAt: Date.now()
+        }
+      },
+      playerOrder: [playerId],
+      status: "waiting",
+      turnIndex: 0,
+      currentImage: "",
+      turnStartedAt: 0,
+      topic: null,
+      createdAt: Date.now()
+    };
+
+    const result = await ref.transaction(current => {
+      if (current !== null) return;
+      return room;
+    });
+
+    if (!result.committed) {
+      alert("방 코드 생성에 실패했어요. 다시 눌러주세요.");
+      return;
+    }
+
+    // 실제 Firebase 저장 여부 재확인
+    const check = await ref.once("value");
+
+    if (!check.exists()) {
+      alert("방이 서버에 저장되지 않았어요.");
+      return;
+    }
+
+    roomCode = code;
+    showGame();
+    listenRoom();
+
+    document.getElementById("status").textContent =
+      "🟢 방 생성 및 서버 저장 완료";
+
+  } catch(e) {
+    alert("방 만들기 오류: " + e.message);
+    console.error(e);
+  }
+}
+">🎨 혼자 그리기 (20초)</button>
 <button onclick="showMultiLobby()">👥 멀티플레이</button>
 </div>
 
@@ -56,7 +109,71 @@ canvas{display:block;width:100%;height:auto;background:white;border:2px solid #d
 <button onclick="createRoom()">방 만들기</button>
 <hr>
 <input id="roomInput" placeholder="방 코드 6자리" maxlength="6">
-<button onclick="joinRoom()">방 참가</button>
+<button onclick="
+async function joinRoom(){
+  try {
+    const code = document.getElementById("roomInput")
+      .value.trim().toUpperCase();
+
+    if (!/^[A-Z0-9]{6}$/.test(code)) {
+      alert("방 코드 6자리를 입력해 주세요.");
+      return;
+    }
+
+    const ref = db.ref("rooms/" + code);
+
+    // 서버에서 방 확인
+    const first = await ref.once("value");
+
+    if (!first.exists()) {
+      alert("방을 찾을 수 없어요. 방 코드와 서버를 확인해 주세요.");
+      return;
+    }
+
+    const result = await ref.transaction(room => {
+      if (!room || room.status !== "waiting") return;
+
+      room.players = room.players || {};
+      room.playerOrder = room.playerOrder || [];
+
+      if (!room.players[playerId] &&
+          room.playerOrder.length >= 5) return;
+
+      if (!room.players[playerId]) {
+        room.players[playerId] = {
+          name: playerName(),
+          joinedAt: Date.now()
+        };
+        room.playerOrder.push(playerId);
+      }
+
+      return room;
+    });
+
+    if (!result.committed) {
+      const latest = await ref.once("value");
+      const room = latest.val();
+
+      if (!room) {
+        alert("방이 서버에서 사라졌어요.");
+      } else if (room.status !== "waiting") {
+        alert("이미 시작한 방이에요.");
+      } else {
+        alert("입장할 수 없어요. 최대 인원 또는 입장 상태를 확인해 주세요.");
+      }
+      return;
+    }
+
+    roomCode = code;
+    showGame();
+    listenRoom();
+
+  } catch(e) {
+    alert("방 참가 오류: " + e.message);
+    console.error(e);
+  }
+}
+">방 참가</button>
 <p class="small">2~5명까지 참가할 수 있어요.</p>
 </div>
 </section>
