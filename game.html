@@ -1,60 +1,475 @@
-async function joinRoom(){
- try{
-  const code=document.getElementById("roomInput")
-    .value.trim().toUpperCase();
 
-  if(!/^[A-Z0-9]{6}$/.test(code)){
-   alert("방 코드 6자리를 입력해 주세요.");
-   return;
-  }
-
-  const ref=db.ref("rooms/"+code);
-
-  const result=await ref.transaction(room=>{
-   if(!room || room.status!=="waiting")return;
-
-   room.players=room.players||{};
-
-   // 실제 참가자 목록을 기준으로 인원 계산
-   const ids=Object.keys(room.players);
-
-   // 이미 참가한 사람은 다시 인원으로 세지 않음
-   if(ids.includes(playerId)){
-    return room;
-   }
-
-   // 실제 참가자 5명일 때만 차단
-   if(ids.length>=5)return;
-
-   room.players[playerId]={
-    name:playerName(),
-    joinedAt:Date.now()
-   };
-
-   room.playerOrder=ids.concat(playerId);
-
-   return room;
-  });
-
-  if(!result.committed){
-   const latest=(await ref.get()).val();
-
-   if(!latest){
-    alert("방이 존재하지 않아요.");
-   }else if(latest.status!=="waiting"){
-    alert("이미 시작한 방이에요.");
-   }else{
-    alert("현재 참가자 수: "+Object.keys(latest.players||{}).length+"명");
-   }
-   return;
-  }
-
-  roomCode=code;
-  showGame();
-  listenRoom();
-
- }catch(e){
-  console.error(e);
-  alert("입장 오류: "+e.message);
- }
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PLAVE 릴레이 그림판</title>
+<style>
+*{box-sizing:border-box}
+body{
+  margin:0;background:#f4f2ff;color:#29243d;
+  font-family:Arial,sans-serif;text-align:center;
 }
+header{background:#8171d9;color:white;padding:20px}
+h1{margin:0;font-size:25px}
+main{max-width:850px;margin:20px auto;padding:12px}
+.panel{
+  background:white;padding:18px;border-radius:18px;
+  margin:14px 0;box-shadow:0 3px 12px #00000010;
+}
+input,button,select{
+  padding:12px;border-radius:10px;border:1px solid #ddd;
+  font-size:15px;margin:4px;
+}
+button{background:#8171d9;color:white;border:0;cursor:pointer}
+button:disabled{opacity:.4;cursor:not-allowed}
+#status{font-weight:bold;color:#6755bd}
+#players{line-height:2}
+canvas{
+  display:block;width:100%;height:auto;
+  background:white;border:2px solid #ded9f8;
+  border-radius:12px;touch-action:none;
+}
+.tools{display:flex;gap:7px;justify-content:center;flex-wrap:wrap;margin:12px}
+#gallery{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.work{background:#faf9ff;padding:8px;border-radius:12px}
+.work img{width:100%;border-radius:8px}
+.small{font-size:13px;color:#777}
+.hidden{display:none}
+</style>
+</head>
+<body>
+
+<header>
+<h1>💙 PLAVE 릴레이 그림판 💜</h1>
+<p>친구들과 함께 그림을 완성해 봐!</p>
+</header>
+
+<main>
+
+<section class="panel" id="lobby">
+<h2>🎮 게임 입장</h2>
+<input id="playerName" placeholder="닉네임 입력" maxlength="12">
+<br>
+<button onclick="createRoom()">방 만들기</button>
+<hr>
+<input id="roomInput" placeholder="방 코드 6자리" maxlength="6">
+<button onclick="joinRoom()">방 참가</button>
+<p class="small">최대 5명까지 함께할 수 있어요.</p>
+</section>
+
+<section class="panel hidden" id="game">
+<h2>방 코드: <span id="roomCode"></span></h2>
+<button onclick="copyRoom()">코드 복사</button>
+<p id="status">연결 중...</p>
+<h3>👥 참가자</h3>
+<div id="players"></div>
+<button id="startBtn" onclick="startGame()">게임 시작</button>
+<p id="turnInfo"></p>
+<p id="message"></p>
+
+<div id="drawingArea" class="hidden">
+  <canvas id="canvas" width="900" height="600"></canvas>
+  <div class="tools">
+    <label>색상 <input type="color" id="color" value="#333333"></label>
+    <label>굵기 <input type="range" id="size" min="2" max="35" value="6"></label>
+    <button onclick="clearCanvas()">지우기</button>
+    <button onclick="undoCanvas()">한 단계 되돌리기</button>
+  </div>
+  <button id="submitBtn" onclick="submitDrawing()">그림 전달하기 ➜</button>
+  <p class="small">내 차례에 그림을 그리고 다음 사람에게 전달하세요.</p>
+</div>
+
+<button onclick="leaveRoom()">방 나가기</button>
+</section>
+
+<section class="panel">
+<h2>🖼️ 작품 갤러리</h2>
+<div id="gallery">
+<p class="small">완성된 작품이 여기에 저장됩니다.</p>
+</div>
+</section>
+
+</main>
+
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+
+<script>
+const firebaseConfig = {
+  apiKey: "AIzaSyCng-mu7Gsd0hrfR4SlX7kkhfmWhvhkTPg",
+  authDomain: "plave-971bd.firebaseapp.com",
+  databaseURL: "https://plave-971bd-default-rtdb.firebaseio.com",
+  projectId: "plave-971bd",
+  storageBucket: "plave-971bd.firebasestorage.app",
+  messagingSenderId: "743852481107",
+  appId: "1:743852481107:web:a84c1d9ced17c3645644a6",
+  measurementId: "G-ENQ8E94BH3"
+};
+
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+
+const canvas = document.getElementById("canvas");
+const ctx = canvas.getContext("2d");
+
+let roomCode = "";
+let playerId = localStorage.getItem("plavePlayerId");
+
+if(!playerId){
+  playerId = "p_" + Math.random().toString(36).slice(2,12);
+  localStorage.setItem("plavePlayerId",playerId);
+}
+
+let roomData = null;
+let drawing = false;
+let undoStack = [];
+let unsubscribe = null;
+
+function name(){
+  return document.getElementById("playerName").value.trim() || "플레이어";
+}
+
+function randomCode(){
+  return Math.random().toString(36).substring(2,8).toUpperCase();
+}
+
+function blankCanvas(){
+  ctx.fillStyle="#ffffff";
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+  undoStack=[];
+}
+
+function showGame(){
+  document.getElementById("lobby").classList.add("hidden");
+  document.getElementById("game").classList.remove("hidden");
+  document.getElementById("roomCode").textContent=roomCode;
+}
+
+async function createRoom(){
+  try{
+    const code=randomCode();
+    const roomRef=db.ref("rooms/"+code);
+    const existing=await roomRef.get();
+    if(existing.exists()) return alert("다시 시도해 주세요.");
+
+    const room={
+      host:playerId,
+      players:{
+        [playerId]:{
+          name:name(),
+          joinedAt:Date.now()
+        }
+      },
+      playerOrder:[playerId],
+      status:"waiting",
+      turnIndex:0,
+      currentImage:"",
+      createdAt:Date.now()
+    };
+
+    await roomRef.set(room);
+    roomCode=code;
+    showGame();
+    listenRoom();
+  }catch(e){
+    alert("방 만들기 실패: "+e.message);
+  }
+}
+
+async function joinRoom(){
+  try{
+    const code=document.getElementById("roomInput").value.trim().toUpperCase();
+    if(!code) return alert("방 코드를 입력해 주세요.");
+
+    const roomRef=db.ref("rooms/"+code);
+    const snap=await roomRef.get();
+
+    if(!snap.exists()) return alert("존재하지 않는 방이에요.");
+
+    const room=snap.val();
+    const order=room.playerOrder || Object.keys(room.players||{});
+
+    if(room.status==="playing") return alert("이미 게임이 시작된 방이에요.");
+    if(room.status==="finished") return alert("이미 끝난 방이에요.");
+    if(!room.players[playerId] && order.length>=5)
+      return alert("방이 가득 찼어요. 최대 5명이에요.");
+
+    if(!room.players[playerId]){
+      await roomRef.child("players/"+playerId).set({
+        name:name(),
+        joinedAt:Date.now()
+      });
+      await roomRef.child("playerOrder").set([...order,playerId]);
+    }
+
+    roomCode=code;
+    showGame();
+    listenRoom();
+  }catch(e){
+    alert("입장 실패: "+e.message);
+  }
+}
+
+function listenRoom(){
+  if(unsubscribe) unsubscribe();
+
+  const roomRef=db.ref("rooms/"+roomCode);
+  const callback=snap=>{
+    if(!snap.exists()){
+      alert("방이 삭제되었어요.");
+      leaveRoom();
+      return;
+    }
+
+    roomData=snap.val();
+    renderRoom();
+  };
+
+  roomRef.on("value",callback);
+  unsubscribe=()=>roomRef.off("value",callback);
+}
+
+function renderRoom(){
+  if(!roomData)return;
+
+  document.getElementById("status").textContent=
+    roomData.status==="waiting"?"🟢 대기 중":
+    roomData.status==="playing"?"🎨 게임 진행 중":"🏆 게임 완료";
+
+  const order=roomData.playerOrder || Object.keys(roomData.players||{});
+  document.getElementById("players").innerHTML=order.map((id,i)=>{
+    const p=roomData.players[id];
+    if(!p)return "";
+    return `${i+1}. ${escapeHTML(p.name)} ${id===roomData.host?"👑":""} ${id===playerId?"(나)":""}`;
+  }).join("<br>");
+
+  const isHost=roomData.host===playerId;
+  document.getElementById("startBtn").classList.toggle("hidden",!isHost || roomData.status!=="waiting");
+
+  if(roomData.status==="playing"){
+    const currentId=order[roomData.turnIndex];
+    const currentPlayer=roomData.players[currentId];
+    const isMyTurn=currentId===playerId;
+
+    document.getElementById("turnInfo").textContent=
+      `차례: ${roomData.turnIndex+1}/${order.length} · ${currentPlayer?.name||"플레이어"}`;
+
+    document.getElementById("message").textContent=
+      isMyTurn?"✏️ 지금은 당신의 차례예요!":"다른 사람이 그림을 그리고 있어요.";
+
+    document.getElementById("drawingArea").classList.remove("hidden");
+    document.getElementById("canvas").style.opacity=isMyTurn?"1":".75";
+    document.getElementById("submitBtn").disabled=!isMyTurn;
+
+    const image=roomData.currentImage;
+    if(image && canvas.dataset.image!==image){
+      loadImage(image);
+    }else if(!image && canvas.dataset.image!=="blank"){
+      blankCanvas();
+      canvas.dataset.image="blank";
+    }
+  }else{
+    document.getElementById("drawingArea").classList.add("hidden");
+    document.getElementById("turnInfo").textContent=
+      roomData.status==="finished"?"🎉 모든 차례가 끝났어요!":"친구들을 기다리는 중...";
+    document.getElementById("message").textContent=
+      roomData.status==="finished"?"작품은 갤러리에 저장됐어요.":"방장이 게임을 시작하면 돼요.";
+  }
+
+  loadGallery();
+}
+
+async function startGame(){
+  if(!roomData || roomData.host!==playerId)return;
+  const order=roomData.playerOrder||[];
+  if(order.length<2)return alert("최소 2명이 모여야 시작할 수 있어요.");
+
+  blankCanvas();
+  canvas.dataset.image="blank";
+
+  await db.ref("rooms/"+roomCode).update({
+    status:"playing",
+    turnIndex:0,
+    currentImage:""
+  });
+}
+
+function loadImage(data){
+  const img=new Image();
+  img.onload=()=>{
+    blankCanvas();
+    ctx.drawImage(img,0,0,canvas.width,canvas.height);
+    canvas.dataset.image=data;
+  };
+  img.src=data;
+}
+
+function isMyTurn(){
+  if(!roomData || roomData.status!=="playing")return false;
+  const order=roomData.playerOrder||[];
+  return order[roomData.turnIndex]===playerId;
+}
+
+function saveUndo(){
+  undoStack.push(canvas.toDataURL("image/png"));
+  if(undoStack.length>20)undoStack.shift();
+}
+
+function pointerPosition(e){
+  const rect=canvas.getBoundingClientRect();
+  return {
+    x:(e.clientX-rect.left)*canvas.width/rect.width,
+    y:(e.clientY-rect.top)*canvas.height/rect.height
+  };
+}
+
+canvas.addEventListener("pointerdown",e=>{
+  if(!isMyTurn())return;
+  drawing=true;
+  canvas.setPointerCapture(e.pointerId);
+  saveUndo();
+  const p=pointerPosition(e);
+  ctx.beginPath();
+  ctx.moveTo(p.x,p.y);
+});
+
+canvas.addEventListener("pointermove",e=>{
+  if(!drawing || !isMyTurn())return;
+  const p=pointerPosition(e);
+  ctx.lineWidth=Number(document.getElementById("size").value);
+  ctx.strokeStyle=document.getElementById("color").value;
+  ctx.lineCap="round";
+  ctx.lineJoin="round";
+  ctx.lineTo(p.x,p.y);
+  ctx.stroke();
+});
+
+canvas.addEventListener("pointerup",()=>{
+  drawing=false;
+  ctx.closePath();
+});
+canvas.addEventListener("pointercancel",()=>drawing=false);
+
+function clearCanvas(){
+  if(!isMyTurn())return;
+  saveUndo();
+  blankCanvas();
+}
+
+function undoCanvas(){
+  if(!isMyTurn() || !undoStack.length)return;
+  loadImage(undoStack.pop());
+}
+
+async function submitDrawing(){
+  if(!isMyTurn())return alert("아직 당신의 차례가 아니에요.");
+
+  const btn=document.getElementById("submitBtn");
+  btn.disabled=true;
+
+  try{
+    const image=canvas.toDataURL("image/jpeg",0.65);
+    const order=roomData.playerOrder||[];
+    const next=roomData.turnIndex+1;
+    const roomRef=db.ref("rooms/"+roomCode);
+
+    if(next>=order.length){
+      const galleryRef=db.ref("gallery/"+roomCode).push();
+      await galleryRef.set({
+        image:image,
+        createdAt:Date.now(),
+        players:order.map(id=>roomData.players[id]?.name||"플레이어")
+      });
+
+      await roomRef.update({
+        currentImage:image,
+        status:"finished"
+      });
+    }else{
+      await roomRef.update({
+        currentImage:image,
+        turnIndex:next
+      });
+    }
+
+    alert("그림을 전달했어요! 💙");
+  }catch(e){
+    alert("전달 실패: "+e.message);
+  }finally{
+    btn.disabled=!isMyTurn();
+  }
+}
+
+async function loadGallery(){
+  const box=document.getElementById("gallery");
+  const snap=await db.ref("gallery/"+roomCode).limitToLast(20).get();
+  box.innerHTML="";
+
+  if(!snap.exists()){
+    box.innerHTML='<p class="small">완성된 작품이 여기에 저장됩니다.</p>';
+    return;
+  }
+
+  const works=Object.values(snap.val()).reverse();
+  works.forEach(work=>{
+    const div=document.createElement("div");
+    div.className="work";
+
+    const img=document.createElement("img");
+    img.src=work.image;
+
+    const caption=document.createElement("p");
+    caption.className="small";
+    caption.textContent=(work.players||[]).join(" → ");
+
+    div.append(img,caption);
+    box.appendChild(div);
+  });
+}
+
+async function copyRoom(){
+  try{
+    await navigator.clipboard.writeText(roomCode);
+    alert("방 코드를 복사했어요!");
+  }catch(e){
+    prompt("방 코드를 복사해 주세요.",roomCode);
+  }
+}
+
+async function leaveRoom(){
+  if(unsubscribe)unsubscribe();
+  unsubscribe=null;
+
+  if(roomCode && roomData){
+    try{
+      const roomRef=db.ref("rooms/"+roomCode);
+      if(roomData.host===playerId){
+        await roomRef.remove();
+      }else{
+        await roomRef.child("players/"+playerId).remove();
+        const order=roomData.playerOrder||[];
+        await roomRef.child("playerOrder").set(order.filter(id=>id!==playerId));
+      }
+    }catch(e){
+      console.log(e);
+    }
+  }
+
+  roomCode="";
+  roomData=null;
+  document.getElementById("game").classList.add("hidden");
+  document.getElementById("lobby").classList.remove("hidden");
+  document.getElementById("gallery").innerHTML=
+    '<p class="small">완성된 작품이 여기에 저장됩니다.</p>';
+}
+
+function escapeHTML(s){
+  return String(s).replace(/[&<>"']/g,c=>({
+    "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"
+  })[c]);
+}
+</script>
+</body>
+</html>
